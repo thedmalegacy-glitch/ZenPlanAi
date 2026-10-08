@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Slider } from './Slider';
 import {
   AIDayPlanResult,
   AIGoalBreakdownResult,
@@ -441,43 +442,35 @@ export const AISheet: React.FC<AISheetProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="text-xs font-bold mb-1.5" style={{ color: 'var(--muted)' }}>
-                      Available minutes
-                    </div>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {[15, 25, 35, 45].map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          aria-pressed={wMinutes === m}
-                          onClick={() => setWMinutes(m)}
-                          className="min-h-[44px] px-3 rounded-xl text-sm font-semibold tabular-nums"
-                          style={{
-                            backgroundColor: wMinutes === m ? 'var(--tint)' : 'var(--bg)',
-                            color: wMinutes === m ? 'var(--accent)' : 'var(--ink)',
-                            border: `1px solid ${wMinutes === m ? 'var(--accent)' : 'var(--line)'}`,
-                          }}
-                        >
-                          {m}m
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                <div className="space-y-4">
+                  <Slider
+                    label="Workout duration"
+                    unit="min"
+                    min={10}
+                    max={60}
+                    step={5}
+                    value={wMinutes}
+                    onChange={(val) => setWMinutes(val)}
+                    presets={[
+                      { label: '15m quick', value: 15 },
+                      { label: '25m calm', value: 25 },
+                      { label: '35m standard', value: 35 },
+                      { label: '45m deep', value: 45 },
+                    ]}
+                  />
 
                   <div>
-                    <div className="text-xs font-bold mb-1.5" style={{ color: 'var(--muted)' }}>
+                    <div className="text-xs font-bold mb-2" style={{ color: 'var(--muted)' }}>
                       Equipment
                     </div>
-                    <div className="flex gap-1.5 flex-wrap">
+                    <div className="grid grid-cols-3 gap-2">
                       {(['no equipment', 'dumbbells', 'gym'] as const).map((eq) => (
                         <button
                           key={eq}
                           type="button"
                           aria-pressed={wEquip === eq}
                           onClick={() => setWEquip(eq)}
-                          className="min-h-[44px] px-3 rounded-xl text-xs font-semibold capitalize"
+                          className="min-h-[44px] px-2 rounded-xl text-xs font-bold capitalize transition-colors text-center"
                           style={{
                             backgroundColor: wEquip === eq ? 'var(--tint)' : 'var(--bg)',
                             color: wEquip === eq ? 'var(--accent)' : 'var(--ink)',

@@ -439,18 +439,79 @@ export default function App() {
 
           {view === 'today' && (
             <div
-              className="h-1.5 rounded-full mt-4 overflow-hidden"
-              style={{ backgroundColor: 'var(--line)' }}
-              role="progressbar"
-              aria-valuenow={progressPct}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Daily task progress"
+              className="mt-4 rounded-2xl p-4 transition-all"
+              style={{
+                backgroundColor: 'var(--surface)',
+                border: '1px solid var(--line)',
+              }}
+              role="region"
+              aria-label="Daily task progress summary"
             >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-extrabold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
+                    Daily Progress
+                  </span>
+                  {totalTodayCount > 0 && (
+                    <span className="text-xs font-semibold tabular-nums" style={{ color: 'var(--ink)' }}>
+                      {doneTodayCount} of {totalTodayCount}
+                    </span>
+                  )}
+                </div>
+                <span
+                  className="text-xs font-extrabold px-2 py-0.5 rounded-lg tabular-nums transition-all"
+                  style={{
+                    backgroundColor: progressPct === 100 && totalTodayCount > 0 ? 'rgba(21, 128, 61, 0.12)' : 'var(--tint)',
+                    color: progressPct === 100 && totalTodayCount > 0 ? 'var(--ok)' : 'var(--accent)',
+                  }}
+                >
+                  {totalTodayCount === 0 ? '0%' : `${progressPct}%`}
+                </span>
+              </div>
+
+              {/* Polished progress track slider */}
               <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{ width: `${progressPct}%`, backgroundColor: 'var(--accent)' }}
-              />
+                className="relative h-2.5 w-full rounded-full overflow-hidden"
+                style={{ backgroundColor: 'var(--line)' }}
+                role="progressbar"
+                aria-valuenow={progressPct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Daily task progress"
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-300 relative"
+                  style={{
+                    width: `${progressPct}%`,
+                    backgroundColor: progressPct === 100 && totalTodayCount > 0 ? 'var(--ok)' : 'var(--accent)',
+                  }}
+                >
+                  {progressPct > 4 && progressPct < 100 && (
+                    <span
+                      className="absolute right-0 top-0 bottom-0 w-2.5 rounded-full bg-white/40 shadow-sm"
+                      aria-hidden="true"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-2 flex items-center justify-between text-[12px]" style={{ color: 'var(--muted)' }}>
+                <span>
+                  {totalTodayCount === 0
+                    ? 'No tasks due today yet'
+                    : progressPct === 100
+                    ? 'All tasks completed for today'
+                    : `${totalTodayCount - doneTodayCount} task${totalTodayCount - doneTodayCount === 1 ? '' : 's'} remaining`}
+                </span>
+                {progressPct === 100 && totalTodayCount > 0 && (
+                  <span className="font-bold flex items-center gap-1" style={{ color: 'var(--ok)' }}>
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12.5 10 17.5 19 7" />
+                    </svg>
+                    Completed
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
@@ -529,21 +590,22 @@ export default function App() {
 
         {/* Quick AI action strip on Today (clean 3-pill grid on mobile, zero scrollbar) */}
         {view === 'today' && settings.aiEnabled && (
-          <div className="grid grid-cols-3 gap-2 pb-3 mb-1">
+          <div className="grid grid-cols-3 gap-2 pb-3 mb-1 w-full max-w-full">
             <button
               type="button"
               onClick={() => {
                 setAiInitialTool('plan_day');
                 setAiSheetOpen(true);
               }}
-              className="min-h-[44px] px-2 rounded-xl text-xs font-bold text-center flex items-center justify-center transition-colors"
+              className="min-h-[46px] py-2 px-1.5 rounded-xl text-xs font-bold text-center flex flex-col items-center justify-center transition-colors active:scale-95"
               style={{
                 backgroundColor: 'var(--surface)',
                 border: '1px solid var(--line)',
                 color: 'var(--ink)',
               }}
             >
-              Plan day
+              <span>Plan day</span>
+              <span className="text-[10px] font-normal" style={{ color: 'var(--muted)' }}>Schedule</span>
             </button>
             <button
               type="button"
@@ -551,14 +613,15 @@ export default function App() {
                 setAiInitialTool('goal');
                 setAiSheetOpen(true);
               }}
-              className="min-h-[44px] px-2 rounded-xl text-xs font-bold text-center flex items-center justify-center transition-colors"
+              className="min-h-[46px] py-2 px-1.5 rounded-xl text-xs font-bold text-center flex flex-col items-center justify-center transition-colors active:scale-95"
               style={{
                 backgroundColor: 'var(--surface)',
                 border: '1px solid var(--line)',
                 color: 'var(--ink)',
               }}
             >
-              Break goal
+              <span>Break goal</span>
+              <span className="text-[10px] font-normal" style={{ color: 'var(--muted)' }}>Subtasks</span>
             </button>
             <button
               type="button"
@@ -566,14 +629,15 @@ export default function App() {
                 setAiInitialTool('review');
                 setAiSheetOpen(true);
               }}
-              className="min-h-[44px] px-2 rounded-xl text-xs font-bold text-center flex items-center justify-center transition-colors"
+              className="min-h-[46px] py-2 px-1.5 rounded-xl text-xs font-bold text-center flex flex-col items-center justify-center transition-colors active:scale-95"
               style={{
                 backgroundColor: 'var(--surface)',
                 border: '1px solid var(--line)',
                 color: 'var(--ink)',
               }}
             >
-              Review
+              <span>Review</span>
+              <span className="text-[10px] font-normal" style={{ color: 'var(--muted)' }}>Weekly</span>
             </button>
           </div>
         )}

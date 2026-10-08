@@ -1,4 +1,5 @@
 import React, { Suspense, useEffect, useRef, useState } from 'react';
+import { Slider } from './Slider';
 import {
   AppSettings,
   EquipmentType,
@@ -71,6 +72,7 @@ export const FitnessView: React.FC<FitnessViewProps> = ({
   } | null>(null);
 
   const [restLeft, setRestLeft] = useState<number>(0);
+  const [customRestSeconds, setCustomRestSeconds] = useState<number>(60);
   const restIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -223,7 +225,7 @@ export const FitnessView: React.FC<FitnessViewProps> = ({
       </div>
 
       <div
-        className="flex rounded-2xl p-1 gap-1 mb-3"
+        className="flex rounded-2xl p-1 gap-1 mb-3 shadow-inner"
         style={{ backgroundColor: 'var(--line)' }}
         role="group"
         aria-label="Fitness level"
@@ -240,10 +242,11 @@ export const FitnessView: React.FC<FitnessViewProps> = ({
                 onUpdateSettings({ fitnessLevel: item.level });
                 haptic(8);
               }}
-              className="flex-1 min-h-[44px] rounded-xl text-sm font-bold transition-colors whitespace-nowrap"
+              className="flex-1 min-h-[44px] rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap active:scale-[0.98]"
               style={{
                 backgroundColor: active ? 'var(--surface)' : 'transparent',
                 color: active ? 'var(--ink)' : 'var(--muted)',
+                boxShadow: active ? '0 2px 6px rgba(0, 0, 0, 0.08)' : 'none',
               }}
             >
               {item.level}
@@ -500,25 +503,33 @@ export const FitnessView: React.FC<FitnessViewProps> = ({
                       style={{ backgroundColor: 'var(--bg)', borderTop: '1px solid var(--line)' }}
                     >
                       <div>
-                        <div className="text-xs font-bold mb-2" style={{ color: 'var(--muted)' }}>
-                          Rest timer (vibrates when finished)
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {[30, 60, 90].map((sec) => (
-                            <button
-                              key={sec}
-                              type="button"
-                              onClick={() => startRestTimer(sec)}
-                              className="min-h-[44px] px-4 rounded-xl text-sm font-semibold tabular-nums"
-                              style={{
-                                backgroundColor: 'var(--surface)',
-                                border: '1px solid var(--line)',
-                              }}
-                            >
-                              {sec}s rest
-                            </button>
-                          ))}
-                        </div>
+                        <Slider
+                          label="Rest timer"
+                          unit="s"
+                          min={15}
+                          max={120}
+                          step={15}
+                          value={customRestSeconds}
+                          onChange={(val) => setCustomRestSeconds(val)}
+                          presets={[
+                            { label: '30s', value: 30 },
+                            { label: '45s', value: 45 },
+                            { label: '60s', value: 60 },
+                            { label: '90s', value: 90 },
+                          ]}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => startRestTimer(customRestSeconds)}
+                          className="mt-2.5 w-full min-h-[44px] rounded-xl text-sm font-bold transition-transform active:scale-[0.98]"
+                          style={{
+                            backgroundColor: 'var(--surface)',
+                            border: '1px solid var(--accent)',
+                            color: 'var(--accent)',
+                          }}
+                        >
+                          Start {customRestSeconds}s rest timer
+                        </button>
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap pt-1">

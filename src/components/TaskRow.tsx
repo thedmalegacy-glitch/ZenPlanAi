@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Task } from '../types';
-import { formatFriendlyDate, formatTime12h, todayISO } from '../utils/dateAndHaptics';
+import { formatFriendlyDate, formatTime12h, haptic, todayISO } from '../utils/dateAndHaptics';
 
 interface TaskRowProps {
   task: Task;
@@ -24,6 +24,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   const startXRef = useRef<number | null>(null);
   const startYRef = useRef<number | null>(null);
   const didSwipeRef = useRef(false);
+  const thresholdPassedRef = useRef(false);
 
   const today = todayISO();
   const isOverdue = !task.done && !!task.due && task.due < today;
@@ -33,6 +34,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
     startXRef.current = e.clientX;
     startYRef.current = e.clientY;
     didSwipeRef.current = false;
+    thresholdPassedRef.current = false;
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -41,12 +43,12 @@ export const TaskRow: React.FC<TaskRowProps> = ({
     const dy = e.clientY - startYRef.current;
 
     if (!isDragging) {
-      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) {
         startXRef.current = null;
         startYRef.current = null;
         return;
       }
-      if (Math.abs(dx) > 10) {
+      if (Math.abs(dx) > 8) {
         setIsDragging(true);
         didSwipeRef.current = true;
         try {
@@ -55,9 +57,24 @@ export const TaskRow: React.FC<TaskRowProps> = ({
       }
     }
 
-    if (isDragging || Math.abs(dx) > 10) {
-      const clamped = Math.max(-140, Math.min(140, dx));
+    if (isDragging || Math.abs(dx) > 8) {
+      // Damped rubber-band clamping for mobile slider feel
+      const maxDrag = 130;
+      let clamped = dx;
+      if (dx > maxDrag) {
+        clamped = maxDrag + (dx - maxDrag) * 0.2;
+      } else if (dx < -maxDrag) {
+        clamped = -maxDrag + (dx + maxDrag) * 0.2;
+      }
       setDragX(clamped);
+
+      const passed = Math.abs(clamped) >= 68;
+      if (passed && !thresholdPassedRef.current) {
+        thresholdPassedRef.current = true;
+        haptic(12);
+      } else if (!passed && thresholdPassedRef.current) {
+        thresholdPassedRef.current = false;
+      }
     }
   };
 
@@ -72,10 +89,10 @@ export const TaskRow: React.FC<TaskRowProps> = ({
     }
 
     setIsDragging(false);
-    if (dragX > 80) {
+    if (dragX >= 68) {
       setDragX(0);
       triggerToggle();
-    } else if (dragX < -80) {
+    } else if (dragX <= -68) {
       setDragX(0);
       setIsLeaving(true);
       setTimeout(() => onDelete(task.id), 180);
@@ -147,19 +164,60 @@ export const TaskRow: React.FC<TaskRowProps> = ({
     metaParts.push(<span key="tag">#{task.tag}</span>);
   }
 
+  const isRightSwipe = dragX > 0;
+  const isLeftSwipe = dragX < 0;
+  const swipeActive = Math.abs(dragX) > 4;
+  const isThresholdMet = Math.abs(dragX) >= 68;
+
   return (
     <div className="relative rounded-2xl overflow-hidden select-none">
+      {/* Background action reveal under the swipe slider */}
       <div
-        className="absolute inset-0 flex items-center justify-between px-5 font-bold text-sm pointer-events-none"
+        className="absolute inset-0 flex items-center justify-between px-4 font-bold text-sm pointer-events-none transition-colors"
         style={{
-          backgroundColor: dragX >= 0 ? 'var(--ok)' : 'var(--danger)',
+          backgroundColor: isRightSwipe
+            ? 'var(--ok)'
+            : isLeftSwipe
+            ? 'var(--danger)'
+            : 'transparent',
           color: '#FFFFFF',
-          opacity: Math.min(1, Math.abs(dragX) / 75),
+          opacity: swipeActive ? Math.min(1, Math.abs(dragX) / 60) : 0,
         }}
         aria-hidden="true"
       >
-        <span>{dragX > 0 ? (task.done ? 'Undo' : 'Complete') : ''}</span>
-        <span>{dragX < 0 ? 'Delete' : ''}</span>
+        <div
+          className="flex items-center gap-2 transition-transform duration-150"
+          style={{
+            transform: isThresholdMet && isRightSwipe ? 'scale(1.08)' : 'scale(0.96)',
+            opacity: isRightSwipe ? 1 : 0,
+          }}
+        >
+          <span className="w-8 h-8 rounded-full bg-white/20 grid place-items-center">
+            <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12.5 10 17.5 19 7" />
+            </svg>
+          </span>
+          <span className="text-xs uppercase tracking-wider font-extrabold text-white">
+            {task.done ? 'Undo' : 'Complete'}
+          </span>
+        </div>
+
+        <div
+          className="flex items-center gap-2 ml-auto transition-transform duration-150"
+          style={{
+            transform: isThresholdMet && isLeftSwipe ? 'scale(1.08)' : 'scale(0.96)',
+            opacity: isLeftSwipe ? 1 : 0,
+          }}
+        >
+          <span className="text-xs uppercase tracking-wider font-extrabold text-white">
+            Delete
+          </span>
+          <span className="w-8 h-8 rounded-full bg-white/20 grid place-items-center">
+            <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+            </svg>
+          </span>
+        </div>
       </div>
 
       <div
