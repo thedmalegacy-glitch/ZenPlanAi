@@ -1,0 +1,8 @@
+{
+  "name": "ZenPlan AI",
+  "description": "A minimalist, mobile-first planner and fitness trainer that blends daily task management with AI-guided workouts for busy lives.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "/",
+  "name": "ZenPlan AI",
+  "short_name": "ZenPlan",
+  "description": "A calm, mobile-first daily task planner and leveled fitness trainer with AI assistance.",
+  "theme_color": "#F5F6F8",
+  "background_color": "#F5F6F8",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
