@@ -26,10 +26,10 @@ export const NotificationSettingsButton: React.FC<NotificationSettingsButtonProp
       type="button"
       onClick={onOpenModal}
       aria-label="Notification Reminder Settings"
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium font-body border transition-all active:scale-95 cursor-pointer ${
+      className={`min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-medium font-body border transition-all active:scale-95 cursor-pointer ${
         isActive
-          ? 'bg-[#E3E8F6] border-[#2F3E8F]/30 text-[#2F3E8F]'
-          : 'bg-white border-[#DDE5EA] text-[#55636F] hover:bg-[#EEF3F6] hover:text-[#17212B]'
+          ? 'bg-[#E3E8F6] border-[#2F3E8F]/30 text-[#2F3E8F] active:bg-[#d5dff6]'
+          : 'bg-white border-[#DDE5EA] text-[#55636F] hover:bg-[#EEF3F6] hover:text-[#17212B] active:bg-[#DDE5EA]'
       }`}
       title={isActive ? `Reminders on (${settings.leadMinutes}m before)` : 'Set push reminders for tasks'}
     >

@@ -34,10 +34,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           onClick={() => onSelectTab('today')}
           aria-label="Today"
           aria-current={currentTab === 'today' ? 'page' : undefined}
-          className={`flex-1 min-h-[56px] rounded-[18px] border-none flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
+          className={`flex-1 min-h-[56px] rounded-[18px] border-none flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95 cursor-pointer ${
             currentTab === 'today'
-              ? 'bg-[#17212B] text-white'
-              : 'bg-transparent text-[#55636F] hover:bg-black/5'
+              ? 'bg-[#17212B] text-white shadow-xs'
+              : 'bg-transparent text-[#55636F] hover:bg-black/5 active:bg-black/10'
           }`}
         >
           {/* Today icon: circle with a check mark, 24x24 viewBox, 20px rendered, stroke currentColor 2px */}
@@ -64,10 +64,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           onClick={() => onSelectTab('upcoming')}
           aria-label="Upcoming"
           aria-current={currentTab === 'upcoming' ? 'page' : undefined}
-          className={`flex-1 min-h-[56px] rounded-[18px] border-none flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
+          className={`flex-1 min-h-[56px] rounded-[18px] border-none flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95 cursor-pointer ${
             currentTab === 'upcoming'
-              ? 'bg-[#17212B] text-white'
-              : 'bg-transparent text-[#55636F] hover:bg-black/5'
+              ? 'bg-[#17212B] text-white shadow-xs'
+              : 'bg-transparent text-[#55636F] hover:bg-black/5 active:bg-black/10'
           }`}
         >
           {/* Upcoming icon: calendar */}
@@ -96,7 +96,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             type="button"
             onClick={onAddTask}
             aria-label="Add new task"
-            className="flex-1 min-h-[56px] rounded-[18px] border-none flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95 cursor-pointer bg-transparent text-[#55636F] hover:bg-black/5 group"
+            className="flex-1 min-h-[56px] rounded-[18px] border-none flex flex-col items-center justify-center gap-0.5 transition-all active:scale-90 cursor-pointer bg-transparent text-[#55636F] hover:bg-black/5 active:bg-black/10 group"
           >
             <div className="w-7 h-7 rounded-full bg-[#F2A33A] text-[#17212B] flex items-center justify-center shadow-xs group-hover:bg-[#e09228] transition-colors">
               <svg
@@ -124,10 +124,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           onClick={() => onSelectTab('fitness')}
           aria-label="Fitness"
           aria-current={currentTab === 'fitness' ? 'page' : undefined}
-          className={`flex-1 min-h-[56px] rounded-[18px] border-none flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
+          className={`flex-1 min-h-[56px] rounded-[18px] border-none flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95 cursor-pointer ${
             currentTab === 'fitness'
-              ? 'bg-[#17212B] text-white'
-              : 'bg-transparent text-[#55636F] hover:bg-black/5'
+              ? 'bg-[#17212B] text-white shadow-xs'
+              : 'bg-transparent text-[#55636F] hover:bg-black/5 active:bg-black/10'
           }`}
         >
           {/* Fitness icon: dumbbell */}
@@ -157,10 +157,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           onClick={() => onSelectTab('done')}
           aria-label="Done"
           aria-current={currentTab === 'done' ? 'page' : undefined}
-          className={`flex-1 min-h-[56px] rounded-[18px] border-none flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
+          className={`flex-1 min-h-[56px] rounded-[18px] border-none flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95 cursor-pointer ${
             currentTab === 'done'
-              ? 'bg-[#17212B] text-white'
-              : 'bg-transparent text-[#55636F] hover:bg-black/5'
+              ? 'bg-[#17212B] text-white shadow-xs'
+              : 'bg-transparent text-[#55636F] hover:bg-black/5 active:bg-black/10'
           }`}
         >
           {/* Done icon: single check mark */}

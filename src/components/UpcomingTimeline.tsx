@@ -157,7 +157,7 @@ export const UpcomingTimeline: React.FC<UpcomingTimelineProps> = ({
           type="button"
           onClick={() => setWeekOffset((w) => w - 1)}
           aria-label="Previous week"
-          className="w-8 h-8 flex items-center justify-center rounded-full text-[#55636F] hover:bg-[#EEF3F6]"
+          className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-[#55636F] hover:bg-[#EEF3F6] active:scale-90 active:bg-[#DDE5EA] transition-all cursor-pointer"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="15 18 9 12 15 6" />
@@ -175,13 +175,13 @@ export const UpcomingTimeline: React.FC<UpcomingTimelineProps> = ({
                 type="button"
                 onClick={() => onSelectDate(wd.dateStr)}
                 aria-label={`Select ${wd.dateStr}`}
-                className={`flex flex-col items-center justify-center w-10 py-1.5 rounded-full transition-all cursor-pointer ${
+                className={`min-h-[44px] min-w-[40px] flex flex-col items-center justify-center py-1.5 px-1 rounded-full transition-all active:scale-95 cursor-pointer ${
                   isSelected
-                    ? 'bg-[#17212B] text-white font-bold'
-                    : 'text-[#17212B] hover:bg-[#EEF3F6]'
+                    ? 'bg-[#17212B] text-white font-bold shadow-xs'
+                    : 'text-[#17212B] hover:bg-[#EEF3F6] active:bg-[#DDE5EA]'
                 }`}
               >
-                <span className="text-[10px] font-semibold text-[#55636F] uppercase">
+                <span className={`text-[10px] font-semibold uppercase ${isSelected ? 'text-white/80' : 'text-[#55636F]'}`}>
                   {wd.dayInitial}
                 </span>
                 <span className="text-sm font-heading">{wd.dayNum}</span>
@@ -200,7 +200,7 @@ export const UpcomingTimeline: React.FC<UpcomingTimelineProps> = ({
           type="button"
           onClick={() => setWeekOffset((w) => w + 1)}
           aria-label="Next week"
-          className="w-8 h-8 flex items-center justify-center rounded-full text-[#55636F] hover:bg-[#EEF3F6]"
+          className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-[#55636F] hover:bg-[#EEF3F6] active:scale-90 active:bg-[#DDE5EA] transition-all cursor-pointer"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="9 18 15 12 9 6" />
@@ -302,8 +302,8 @@ export const UpcomingTimeline: React.FC<UpcomingTimelineProps> = ({
                       type="button"
                       onClick={() => onToggleComplete(t.id)}
                       aria-label={t.completed ? 'Mark incomplete' : 'Mark complete'}
-                      className={`w-11 h-11 flex items-center justify-center rounded-full cursor-pointer ${
-                        isTargetNext ? 'text-white hover:bg-white/10' : 'text-[#17212B] hover:bg-[#EEF3F6]'
+                      className={`w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer active:scale-90 transition-all ${
+                        isTargetNext ? 'text-white hover:bg-white/10 active:bg-white/20' : 'text-[#17212B] hover:bg-[#EEF3F6] active:bg-[#DDE5EA]'
                       }`}
                     >
                       <div
@@ -326,8 +326,8 @@ export const UpcomingTimeline: React.FC<UpcomingTimelineProps> = ({
                       type="button"
                       onClick={() => onEditTask(t)}
                       aria-label={`Edit ${t.title}`}
-                      className={`w-11 h-11 flex items-center justify-center rounded-full cursor-pointer ${
-                        isTargetNext ? 'text-white hover:bg-white/10' : 'text-[#55636F] hover:bg-[#EEF3F6]'
+                      className={`w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer active:scale-90 transition-all ${
+                        isTargetNext ? 'text-white hover:bg-white/10 active:bg-white/20' : 'text-[#55636F] hover:bg-[#EEF3F6] active:bg-[#DDE5EA]'
                       }`}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

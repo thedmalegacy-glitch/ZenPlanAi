@@ -132,7 +132,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close task form"
-            className="w-11 h-11 flex items-center justify-center rounded-full text-[#55636F] hover:bg-[#EEF3F6] transition-colors"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-[#55636F] hover:bg-[#EEF3F6] active:scale-90 active:bg-[#DDE5EA] transition-all cursor-pointer"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -344,7 +344,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 type="button"
                 onClick={handleAddStep}
                 aria-label="Add subtask step"
-                className="min-h-[44px] px-4 rounded-xl bg-[#EEF3F6] text-[#17212B] text-xs font-semibold hover:bg-[#DDE5EA] transition-colors cursor-pointer"
+                className="min-h-[44px] min-w-[44px] px-4 rounded-xl bg-[#EEF3F6] text-[#17212B] text-xs font-semibold hover:bg-[#DDE5EA] active:scale-95 active:bg-[#D5DFE6] transition-all cursor-pointer"
               >
                 Add
               </button>
@@ -355,14 +355,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 {steps.map((st) => (
                   <div
                     key={st.id}
-                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#EEF3F6] text-xs"
+                    className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-[#EEF3F6] text-xs min-h-[44px]"
                   >
                     <span className="text-[#17212B] truncate">{st.title}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveStep(st.id)}
                       aria-label={`Remove step ${st.title}`}
-                      className="text-[#55636F] hover:text-[#E4572E] p-1"
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-[#55636F] hover:text-[#E4572E] active:scale-90 transition-all cursor-pointer"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <line x1="18" y1="6" x2="6" y2="18" />

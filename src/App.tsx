@@ -380,7 +380,7 @@ export default function App() {
                 type="button"
                 onClick={() => setZenModalType('plan')}
                 aria-label="Plan day"
-                className="min-h-[44px] px-2 py-2.5 rounded-[16px] bg-[#F2A33A] text-[#17212B] font-heading font-bold text-xs flex flex-col items-center justify-center gap-0.5 hover:bg-[#e09228] transition-colors cursor-pointer"
+                className="min-h-[44px] px-2 py-2.5 rounded-[16px] bg-[#F2A33A] text-[#17212B] font-heading font-bold text-xs flex flex-col items-center justify-center gap-0.5 hover:bg-[#e09228] active:scale-95 active:bg-[#d6851f] transition-all cursor-pointer shadow-xs"
               >
                 <span>Plan day</span>
                 <span className="text-[10px] font-normal opacity-85">Schedule</span>
@@ -390,7 +390,7 @@ export default function App() {
                 type="button"
                 onClick={() => setZenModalType('break')}
                 aria-label="Break goal into subtasks"
-                className="min-h-[44px] px-2 py-2.5 rounded-[16px] bg-white border border-[#DDE5EA] text-[#17212B] font-heading font-semibold text-xs flex flex-col items-center justify-center gap-0.5 hover:bg-[#EEF3F6] transition-colors cursor-pointer"
+                className="min-h-[44px] px-2 py-2.5 rounded-[16px] bg-white border border-[#DDE5EA] text-[#17212B] font-heading font-semibold text-xs flex flex-col items-center justify-center gap-0.5 hover:bg-[#EEF3F6] active:scale-95 active:bg-[#DDE5EA] transition-all cursor-pointer shadow-xs"
               >
                 <span>Break goal</span>
                 <span className="text-[10px] text-[#55636F] font-normal">Subtasks</span>
@@ -400,7 +400,7 @@ export default function App() {
                 type="button"
                 onClick={() => setZenModalType('review')}
                 aria-label="Review weekly progress"
-                className="min-h-[44px] px-2 py-2.5 rounded-[16px] bg-white border border-[#DDE5EA] text-[#17212B] font-heading font-semibold text-xs flex flex-col items-center justify-center gap-0.5 hover:bg-[#EEF3F6] transition-colors cursor-pointer"
+                className="min-h-[44px] px-2 py-2.5 rounded-[16px] bg-white border border-[#DDE5EA] text-[#17212B] font-heading font-semibold text-xs flex flex-col items-center justify-center gap-0.5 hover:bg-[#EEF3F6] active:scale-95 active:bg-[#DDE5EA] transition-all cursor-pointer shadow-xs"
               >
                 <span>Review</span>
                 <span className="text-[10px] text-[#55636F] font-normal">Weekly</span>

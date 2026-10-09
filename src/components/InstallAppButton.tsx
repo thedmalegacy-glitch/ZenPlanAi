@@ -28,7 +28,7 @@ export const InstallAppButton: React.FC = () => {
         type="button"
         onClick={handleInstallClick}
         aria-label="Install ZenPlan App"
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium font-body bg-white border border-[#DDE5EA] text-[#17212B] hover:bg-[#F2A33A]/10 hover:border-[#F2A33A]/50 active:scale-95 transition-all shadow-none cursor-pointer"
+        className="min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-medium font-body bg-white border border-[#DDE5EA] text-[#17212B] hover:bg-[#F2A33A]/10 hover:border-[#F2A33A]/50 active:scale-95 active:bg-[#F2A33A]/20 transition-all shadow-none cursor-pointer"
         title="Install app to your home screen"
       >
         <svg

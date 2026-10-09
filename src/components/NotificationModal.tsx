@@ -100,7 +100,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close notifications modal"
-            className="w-10 h-10 rounded-full flex items-center justify-center text-[#55636F] hover:bg-[#EEF3F6] transition-colors"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center text-[#55636F] hover:bg-[#EEF3F6] active:scale-90 active:bg-[#DDE5EA] transition-all cursor-pointer"
           >
             ✕
           </button>
@@ -184,7 +184,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               <button
                 type="button"
                 onClick={handleSendTest}
-                className="flex-1 py-2.5 px-4 rounded-[16px] border border-[#DDE5EA] font-body text-xs font-semibold text-[#17212B] hover:bg-[#EEF3F6] active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="min-h-[44px] flex-1 py-2.5 px-4 rounded-[16px] border border-[#DDE5EA] font-body text-xs font-semibold text-[#17212B] hover:bg-[#EEF3F6] active:scale-95 active:bg-[#DDE5EA] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polygon points="5 3 19 12 5 21 5 3" />
@@ -195,7 +195,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="py-2.5 px-5 rounded-[16px] bg-[#17212B] font-body text-xs font-semibold text-white hover:bg-black active:scale-98 transition-all cursor-pointer"
+                className="min-h-[44px] py-2.5 px-6 rounded-[16px] bg-[#17212B] font-body text-xs font-semibold text-white hover:bg-black active:scale-95 active:bg-gray-800 transition-all cursor-pointer"
               >
                 Done
               </button>

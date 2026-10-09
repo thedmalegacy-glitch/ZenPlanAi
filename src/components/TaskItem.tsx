@@ -43,7 +43,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
           type="button"
           onClick={() => onToggleComplete(task.id)}
           aria-label={task.completed ? `Mark "${task.title}" as incomplete` : `Mark "${task.title}" as complete`}
-          className="w-11 h-11 -ml-1 -mt-1 flex items-center justify-center flex-shrink-0 text-[#17212B] cursor-pointer"
+          className="min-h-[44px] min-w-[44px] -ml-1 -mt-1 flex items-center justify-center flex-shrink-0 text-[#17212B] active:scale-90 transition-transform cursor-pointer"
         >
           <div
             className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
@@ -115,7 +115,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
                   e.stopPropagation();
                   setShowSteps(!showSteps);
                 }}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EEF3F6] text-[#17212B] font-medium text-[11px] hover:bg-[#DDE5EA] transition-colors"
+                className="min-h-[44px] min-w-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#EEF3F6] text-[#17212B] font-medium text-[11px] hover:bg-[#DDE5EA] active:scale-95 active:bg-[#D5DFE6] transition-all cursor-pointer"
                 aria-label={`Toggle steps. ${completedStepsCount} of ${totalSteps} completed`}
               >
                 <span>{completedStepsCount}/{totalSteps} steps</span>
@@ -126,7 +126,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
-                  className={`transition-transform ${showSteps ? 'rotate-180' : ''}`}
+                  className={`transition-transform duration-200 ${showSteps ? 'rotate-180' : ''}`}
                 >
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
@@ -166,7 +166,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
             type="button"
             onClick={() => onEdit(task)}
             aria-label={`Edit ${task.title}`}
-            className="w-11 h-11 flex items-center justify-center rounded-full text-[#55636F] hover:text-[#17212B] hover:bg-[#EEF3F6] transition-colors"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-[#55636F] hover:text-[#17212B] hover:bg-[#EEF3F6] active:scale-90 active:bg-[#DDE5EA] transition-all cursor-pointer"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
@@ -177,7 +177,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
             type="button"
             onClick={() => onDelete(task.id)}
             aria-label={`Delete ${task.title}`}
-            className="w-11 h-11 flex items-center justify-center rounded-full text-[#55636F] hover:text-[#E4572E] hover:bg-[#FBE3DC] transition-colors"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-[#55636F] hover:text-[#E4572E] hover:bg-[#FBE3DC] active:scale-90 active:bg-[#F8C9BD] transition-all cursor-pointer"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 6h18" />
@@ -195,23 +195,26 @@ export const TaskItem: React.FC<TaskItemProps> = ({
             <div
               key={step.id}
               onClick={() => onToggleStep && onToggleStep(task.id, step.id)}
-              className="flex items-center gap-2 cursor-pointer group"
+              role="checkbox"
+              aria-checked={step.completed}
+              tabIndex={0}
+              className="min-h-[44px] flex items-center gap-2.5 px-2 py-1.5 rounded-xl cursor-pointer hover:bg-[#EEF3F6] active:scale-98 transition-all group select-none"
             >
               <div
-                className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                className={`w-5 h-5 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${
                   step.completed
                     ? 'bg-[#17212B] border-[#17212B] text-white'
-                    : 'border-[#9AA9B5] group-hover:border-[#17212B]'
+                    : 'border-[#9AA9B5] group-hover:border-[#17212B] bg-white'
                 }`}
               >
                 {step.completed && (
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 )}
               </div>
               <span
-                className={`text-[13px] ${
+                className={`text-[13px] leading-tight ${
                   step.completed ? 'line-through text-[#9AA9B5]' : 'text-[#17212B]'
                 }`}
               >
