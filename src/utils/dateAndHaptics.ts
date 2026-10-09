@@ -68,6 +68,11 @@ export function haptic(pattern: number | number[] = 10): void {
   } catch {}
 }
 
+export function isOverdue(due: string | null | undefined, today = todayISO()): boolean {
+  if (!due) return false;
+  return due < today;
+}
+
 export function computeWorkoutStats(logs: WorkoutLog[], today: string) {
   const weekAgo = addDays(today, -6);
   const workoutsThisWeek = logs.filter((l) => l.date >= weekAgo && l.date <= today).length;

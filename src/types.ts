@@ -17,6 +17,8 @@ export interface Task {
   done: boolean;
   doneAt?: string | null;
   createdAt: string;
+  reminderEnabled?: boolean;
+  reminderOffsetMinutes?: number;
 }
 
 export interface Exercise {
@@ -60,6 +62,8 @@ export interface AppSettings {
   disclaimerAccepted: boolean;
   syncEmail?: string;
   lastSyncedAt?: string;
+  notificationsEnabled?: boolean;
+  defaultReminderOffset?: number;
 }
 
 export interface AIQuickAddResult {

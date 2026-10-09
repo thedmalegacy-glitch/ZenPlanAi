@@ -30,7 +30,11 @@ import {
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { TaskRow } from './components/TaskRow';
 import { TaskSheet } from './components/TaskSheet';
+import { DailyThoughtCard } from './components/DailyThoughtCard';
+import { TaskInsights } from './components/TaskInsights';
 import { PWAInstallButton } from './components/PWAInstallButton';
+import { checkAndTriggerTaskReminders } from './utils/notifications';
+import { isOverdue } from './utils/dateAndHaptics';
 import type { AIToolTab } from './components/AISheet';
 
 const LazyFitnessView = React.lazy(() => import('./components/FitnessView'));
@@ -125,6 +129,27 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (settings.notificationsEnabled === false) return;
+    checkAndTriggerTaskReminders(tasks);
+
+    const intervalId = window.setInterval(() => {
+      checkAndTriggerTaskReminders(tasks);
+    }, 20000);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkAndTriggerTaskReminders(tasks);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [tasks, settings.notificationsEnabled]);
+
   const showToast = (message: string, canUndo = false) => {
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
     setToastState({ message, canUndo });
@@ -209,6 +234,8 @@ export default function App() {
       priority: Priority;
       repeat: RepeatFrequency;
       tag?: string;
+      reminderEnabled?: boolean;
+      reminderOffsetMinutes?: number;
     },
     editingId?: string
   ) => {
@@ -224,6 +251,8 @@ export default function App() {
               priority: draft.priority,
               repeat: draft.repeat,
               tag: draft.tag,
+              reminderEnabled: draft.reminderEnabled,
+              reminderOffsetMinutes: draft.reminderOffsetMinutes,
             }
           : t
       );
@@ -240,6 +269,8 @@ export default function App() {
         tag: draft.tag,
         done: false,
         createdAt: today,
+        reminderEnabled: draft.reminderEnabled,
+        reminderOffsetMinutes: draft.reminderOffsetMinutes,
       };
       commitTasks([...tasks, newTask], snapshot);
       if (draft.due && draft.due > today) {
@@ -249,6 +280,14 @@ export default function App() {
       }
       showToast('Task added', true);
     }
+  };
+
+  const handleRescheduleOverdue = () => {
+    const snapshot = [...tasks];
+    const updated = tasks.map((t) => (!t.done && isOverdue(t.due, today) ? { ...t, due: today } : t));
+    commitTasks(updated, snapshot);
+    haptic(10);
+    showToast('Overdue tasks rescheduled to Today', true);
   };
 
   const handleClearCompleted = () => {
@@ -438,15 +477,22 @@ export default function App() {
           </p>
 
           {view === 'today' && (
-            <div
-              className="mt-4 rounded-2xl p-4 transition-all"
-              style={{
-                backgroundColor: 'var(--surface)',
-                border: '1px solid var(--line)',
-              }}
-              role="region"
-              aria-label="Daily task progress summary"
-            >
+            <>
+              {/* Daily Motivational Thought at Top */}
+              <DailyThoughtCard dateISO={today} />
+
+              {/* Unique Task Insights (Progress, Urgency Matrix, Pending vs Complete) */}
+              <TaskInsights tasks={tasks} onRescheduleOverdue={handleRescheduleOverdue} />
+
+              <div
+                className="mt-3 rounded-2xl p-4 transition-all"
+                style={{
+                  backgroundColor: 'var(--surface)',
+                  border: '1px solid var(--line)',
+                }}
+                role="region"
+                aria-label="Daily task progress summary"
+              >
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-extrabold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
@@ -513,7 +559,8 @@ export default function App() {
                 )}
               </div>
             </div>
-          )}
+          </>
+        )}
 
           {view !== 'fitness' && (searchOpen || searchQuery || activeTag !== 'all') && (
             <div className="mt-4 space-y-2.5">

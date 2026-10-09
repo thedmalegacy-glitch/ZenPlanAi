@@ -136,8 +136,20 @@ export const TaskRow: React.FC<TaskRowProps> = ({
 
   if (task.time) {
     metaParts.push(
-      <span key="time" className="tabular-nums">
-        {formatTime12h(task.time)}
+      <span
+        key="time"
+        className="tabular-nums font-semibold inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px]"
+        style={{ backgroundColor: 'var(--tint)', color: 'var(--accent)' }}
+      >
+        <span>⏰ {formatTime12h(task.time)}</span>
+        {task.reminderEnabled && (
+          <span
+            className="text-[10px] font-bold"
+            title={`Reminder: ${task.reminderOffsetMinutes ?? 10}m before`}
+          >
+            🔔 -{task.reminderOffsetMinutes ?? 10}m
+          </span>
+        )}
       </span>
     );
   }

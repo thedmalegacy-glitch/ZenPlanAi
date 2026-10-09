@@ -2,6 +2,12 @@ import React, { useState } from 'react';
 import { AppSettings } from '../types';
 import { PWAInstallButton } from './PWAInstallButton';
 import { haptic } from '../utils/dateAndHaptics';
+import {
+  getNotificationPermission,
+  isNotificationSupported,
+  requestNotificationPermission,
+  sendTestNotification,
+} from '../utils/notifications';
 
 interface SettingsSheetProps {
   open: boolean;
@@ -171,6 +177,123 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
               })}
             </div>
           </div>
+        </div>
+
+        <div
+          className="rounded-2xl p-4 space-y-3"
+          style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--line)' }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="font-bold text-sm flex items-center gap-1.5">
+                <span>🔔 Mobile Push Reminders</span>
+                {isNotificationSupported() && (
+                  <span
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase"
+                    style={{
+                      backgroundColor:
+                        getNotificationPermission() === 'granted'
+                          ? 'rgba(34, 197, 94, 0.15)'
+                          : 'var(--tint)',
+                      color:
+                        getNotificationPermission() === 'granted'
+                          ? 'var(--ok)'
+                          : 'var(--accent)',
+                    }}
+                  >
+                    {getNotificationPermission() === 'granted' ? 'Active' : 'Setup'}
+                  </span>
+                )}
+              </div>
+              <div className="text-xs mt-0.5 leading-relaxed" style={{ color: 'var(--muted)' }}>
+                Get alerts on your phone before tasks start (10 min early, 20 min early, etc.).
+              </div>
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.notificationsEnabled !== false}
+              onClick={async () => {
+                const nextState = settings.notificationsEnabled === false ? true : false;
+                if (nextState) {
+                  await requestNotificationPermission();
+                }
+                onUpdateSettings({ notificationsEnabled: nextState });
+                haptic(8);
+              }}
+              className="min-h-[44px] px-4 rounded-xl text-sm font-bold shrink-0"
+              style={{
+                backgroundColor: settings.notificationsEnabled !== false ? 'var(--accent)' : 'var(--surface)',
+                color: settings.notificationsEnabled !== false ? 'var(--on-accent)' : 'var(--muted)',
+                border: `1px solid ${settings.notificationsEnabled !== false ? 'var(--accent)' : 'var(--line)'}`,
+              }}
+            >
+              {settings.notificationsEnabled !== false ? 'On' : 'Off'}
+            </button>
+          </div>
+
+          {settings.notificationsEnabled !== false && (
+            <div className="pt-2.5 space-y-2.5" style={{ borderTop: '1px solid var(--line)' }}>
+              <div>
+                <div className="text-xs font-bold mb-1.5" style={{ color: 'var(--muted)' }}>
+                  Default Reminder Lead Time
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { label: 'At time', val: 0 },
+                    { label: '5m early', val: 5 },
+                    { label: '10m early', val: 10 },
+                    { label: '15m early', val: 15 },
+                    { label: '20m early', val: 20 },
+                    { label: '30m early', val: 30 },
+                  ].map((lead) => {
+                    const active = (settings.defaultReminderOffset ?? 10) === lead.val;
+                    return (
+                      <button
+                        key={lead.val}
+                        type="button"
+                        onClick={() => {
+                          onUpdateSettings({ defaultReminderOffset: lead.val });
+                          haptic(6);
+                        }}
+                        className="min-h-[36px] px-3 rounded-lg text-xs font-bold transition-all"
+                        style={{
+                          backgroundColor: active ? 'var(--accent)' : 'var(--surface)',
+                          color: active ? 'var(--on-accent)' : 'var(--muted)',
+                          border: `1px solid ${active ? 'var(--accent)' : 'var(--line)'}`,
+                        }}
+                      >
+                        {lead.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    haptic(10);
+                    const success = await sendTestNotification();
+                    if (success) {
+                      onToast('Test reminder alert sent! Check your notification bar.');
+                    } else {
+                      onToast('Please grant notification permission in your browser/device settings.');
+                    }
+                  }}
+                  className="min-h-[38px] px-3 rounded-xl text-xs font-extrabold flex items-center gap-1.5"
+                  style={{ backgroundColor: 'var(--tint)', color: 'var(--accent)' }}
+                >
+                  <span>📲 Send Test Notification</span>
+                </button>
+                <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
+                  Haptics enabled
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div
