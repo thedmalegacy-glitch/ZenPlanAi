@@ -20,7 +20,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   return (
     <nav
       aria-label="Main Navigation"
-      className="fixed inset-x-0 bottom-0 z-50 px-4 sm:px-6 pb-[max(12px,calc(env(safe-area-inset-bottom)+8px))] pt-2 pointer-events-none flex justify-center"
+      className="fixed inset-x-0 bottom-0 z-50 px-3.5 sm:px-6 pb-[max(8px,env(safe-area-inset-bottom))] pt-1.5 pointer-events-none flex justify-center"
     >
       <div
         className="pointer-events-auto w-full max-w-md bg-white border border-[#DDE5EA] rounded-[22px] p-1 flex gap-0.5 shadow-sm"

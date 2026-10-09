@@ -10,7 +10,15 @@ import { FitnessView } from './components/FitnessView';
 import { DoneView } from './components/DoneView';
 import { ZenActionModal } from './components/ZenActionModal';
 import { InstallAppButton } from './components/InstallAppButton';
+import { NotificationSettingsButton } from './components/NotificationSettingsButton';
+import { NotificationModal } from './components/NotificationModal';
 import { getTodayDateString, formatDateLabel, addDays } from './utils/time';
+import {
+  loadNotificationSettings,
+  saveNotificationSettings,
+  checkAndTriggerTaskReminders,
+  NotificationSettings,
+} from './utils/notifications';
 
 const STORAGE_KEY_TASKS = 'zenplan_orbit_tasks_v1';
 const STORAGE_KEY_THOUGHT = 'zenplan_orbit_thought_idx';
@@ -72,6 +80,12 @@ export default function App() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [modalDefaultDate, setModalDefaultDate] = useState<string>(getTodayDateString());
   const [zenModalType, setZenModalType] = useState<'plan' | 'break' | 'review' | null>(null);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+
+  // Notifications settings & on-device reminder scheduler
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => {
+    return loadNotificationSettings();
+  });
 
   // Sync tasks to localStorage
   useEffect(() => {
@@ -81,6 +95,25 @@ export default function App() {
       console.error(e);
     }
   }, [tasks]);
+
+  // Periodic reminder checking interval (every 25 seconds)
+  useEffect(() => {
+    if (!notificationSettings.enabled) return;
+
+    // Check immediately on load/update
+    checkAndTriggerTaskReminders(tasks, notificationSettings);
+
+    const interval = setInterval(() => {
+      checkAndTriggerTaskReminders(tasks, notificationSettings);
+    }, 25000);
+
+    return () => clearInterval(interval);
+  }, [tasks, notificationSettings]);
+
+  const handleUpdateNotificationSettings = (newSettings: NotificationSettings) => {
+    setNotificationSettings(newSettings);
+    saveNotificationSettings(newSettings);
+  };
 
   const handleNextThought = () => {
     const nextIdx = (thoughtIndex + 1) % MOTIVATIONAL_THOUGHTS.length;
@@ -249,11 +282,11 @@ export default function App() {
   const todayUrgent = todayTasks.filter((t) => !t.completed && t.priority === 'high').length;
 
   const currentThought = MOTIVATIONAL_THOUGHTS[thoughtIndex];
-  const isAnyModalOpen = isTaskModalOpen || zenModalType !== null;
+  const isAnyModalOpen = isTaskModalOpen || zenModalType !== null || isNotificationModalOpen;
 
   return (
-    <div className="min-h-screen bg-[#EEF3F6] text-[#17212B] flex justify-center selection:bg-[#F2A33A]/30">
-      <main className="w-full max-w-md min-h-screen px-6 py-6 pb-32 relative">
+    <div className="h-full min-h-[100dvh] w-full bg-[#EEF3F6] text-[#17212B] flex justify-center selection:bg-[#F2A33A]/30">
+      <main className="w-full max-w-md min-h-[100dvh] px-5 sm:px-6 pt-[max(20px,env(safe-area-inset-top))] pb-[max(120px,calc(env(safe-area-inset-bottom)+96px))] relative">
         {/* ================= SCREEN 1: TODAY ================= */}
         {currentTab === 'today' && (
           <div className="space-y-4">
@@ -271,8 +304,15 @@ export default function App() {
                 </p>
               </div>
 
-              {/* Install App Button matching Daylight Orbit theme */}
-              <InstallAppButton />
+              {/* Action buttons: Reminders & Install App */}
+              <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                <NotificationSettingsButton
+                  settings={notificationSettings}
+                  onOpenModal={() => setIsNotificationModalOpen(true)}
+                  onUpdateSettings={handleUpdateNotificationSettings}
+                />
+                <InstallAppButton />
+              </div>
             </div>
 
             {/* Daily Thought Strip */}
@@ -477,6 +517,14 @@ export default function App() {
         onClose={() => setZenModalType(null)}
         onApplyPlan={handleApplyRebalance}
         onApplySubtasks={handleApplySubtasks}
+      />
+
+      {/* Push Notification & Reminder Settings Modal */}
+      <NotificationModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
+        settings={notificationSettings}
+        onSaveSettings={handleUpdateNotificationSettings}
       />
     </div>
   );

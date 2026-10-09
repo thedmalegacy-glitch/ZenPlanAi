@@ -19,6 +19,7 @@ export interface Task {
   priority: TaskPriority;
   completed: boolean;
   recurrence?: RecurrenceType;
+  reminderLeadMinutes?: number; // Minutes before startTime to notify (e.g. 0, 5, 10, 15)
   steps: SubTask[];
   createdAt: number;
   completedAt?: number;

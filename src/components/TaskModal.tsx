@@ -26,6 +26,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [category, setCategory] = useState<TaskCategory>('work');
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
+  const [reminderLeadMinutes, setReminderLeadMinutes] = useState<number>(10);
   const [steps, setSteps] = useState<SubTask[]>([]);
   const [newStepText, setNewStepText] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -41,6 +42,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setCategory(initialTask.category || 'work');
       setPriority(initialTask.priority || 'medium');
       setRecurrence(initialTask.recurrence || 'none');
+      setReminderLeadMinutes(initialTask.reminderLeadMinutes !== undefined ? initialTask.reminderLeadMinutes : 10);
       setSteps(initialTask.steps || []);
     } else {
       setTitle('');
@@ -52,6 +54,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setCategory('work');
       setPriority('medium');
       setRecurrence('none');
+      setReminderLeadMinutes(10);
       setSteps([]);
     }
     setErrorMsg('');
@@ -103,6 +106,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       category,
       priority,
       recurrence,
+      reminderLeadMinutes: parsedTime || typedTime ? Number(reminderLeadMinutes) : undefined,
       steps,
       completed: initialTask ? initialTask.completed : false,
       completedAt: initialTask ? initialTask.completedAt : undefined,
@@ -287,6 +291,34 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <option value="weekly">Weekly</option>
               </select>
             </div>
+          </div>
+
+          {/* Push Reminder Lead */}
+          <div className="p-3 rounded-xl bg-[#EEF3F6] border border-[#DDE5EA]">
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor="task-reminder-select" className="text-xs font-semibold text-[#17212B] flex items-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#F2A33A]">
+                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                </svg>
+                Push Reminder Alert
+              </label>
+              <select
+                id="task-reminder-select"
+                value={reminderLeadMinutes}
+                onChange={(e) => setReminderLeadMinutes(Number(e.target.value))}
+                className="px-2.5 py-1.5 rounded-lg border border-[#DDE5EA] bg-white text-[#17212B] font-body text-xs focus:border-[#F2A33A] focus:outline-none"
+              >
+                <option value={0}>At scheduled time</option>
+                <option value={5}>5 min before</option>
+                <option value={10}>10 min before</option>
+                <option value={15}>15 min before</option>
+                <option value={30}>30 min before</option>
+              </select>
+            </div>
+            <p className="text-[11px] text-[#55636F] mt-1">
+              Sends an on-device push notification prior to task kickoff (stored 100% locally).
+            </p>
           </div>
 
           {/* Subtasks (Steps) */}
