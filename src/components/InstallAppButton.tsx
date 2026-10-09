@@ -163,24 +163,48 @@ export const InstallAppButton: React.FC = () => {
               To install ZenPlan directly on your phone or desktop:
             </p>
 
-            <ul className="font-body text-[13px] text-[#17212B] space-y-2 bg-[#EEF3F6] p-3.5 rounded-[16px]">
+            <ul className="font-body text-[13px] text-[#17212B] space-y-2.5 bg-[#EEF3F6] p-3.5 rounded-[16px]">
               <li className="flex items-start gap-2">
-                <span className="font-bold text-[#2A8C8C]">•</span>
-                <span><strong>In Chrome/Edge:</strong> Tap the browser menu (⋮) and select <strong>&quot;Install app&quot;</strong> or <strong>&quot;Add to Home screen&quot;</strong>.</span>
+                <span className="font-bold text-[#F2A33A]">1.</span>
+                <span>
+                  <strong>On Android (Chrome / Brave / Edge):</strong> Tap the <strong>⋮ (3 dots)</strong> menu in the top right, then tap <strong>&quot;Install app&quot;</strong> or <strong>&quot;Add to Home screen&quot;</strong>.
+                </span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="font-bold text-[#2A8C8C]">•</span>
-                <span><strong>In Safari (iOS):</strong> Tap Share (square with arrow) → <strong>&quot;Add to Home Screen&quot;</strong>.</span>
+                <span className="font-bold text-[#F2A33A]">2.</span>
+                <span>
+                  <strong>On iPhone / iPad (Safari):</strong> Tap the <strong>Share</strong> button (box with upward arrow) at bottom of screen, then select <strong>&quot;Add to Home Screen&quot;</strong>.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="font-bold text-[#F2A33A]">3.</span>
+                <span>
+                  <strong>On Computer (Chrome / Edge):</strong> Look for the <strong>Install</strong> icon (computer with down arrow) on the right side of your browser URL address bar.
+                </span>
               </li>
             </ul>
 
-            <button
-              type="button"
-              onClick={() => setShowHelpModal(false)}
-              className="w-full py-2.5 rounded-[16px] bg-[#17212B] text-white font-body text-[13px] font-semibold hover:bg-black transition-colors"
-            >
-              Got it
-            </button>
+            <div className="flex gap-2">
+              {isInstallable && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await install();
+                    setShowHelpModal(false);
+                  }}
+                  className="flex-1 py-2.5 rounded-[16px] bg-[#F2A33A] text-[#17212B] font-body text-[13px] font-bold hover:bg-[#e09228] transition-colors"
+                >
+                  Prompt Install Now
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowHelpModal(false)}
+                className="flex-1 py-2.5 rounded-[16px] bg-[#17212B] text-white font-body text-[13px] font-semibold hover:bg-black transition-colors"
+              >
+                Got it
+              </button>
+            </div>
           </div>
         </div>
       )}

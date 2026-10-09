@@ -285,8 +285,8 @@ export default function App() {
   const isAnyModalOpen = isTaskModalOpen || zenModalType !== null || isNotificationModalOpen;
 
   return (
-    <div className="h-full min-h-[100dvh] w-full bg-[#EEF3F6] text-[#17212B] flex justify-center selection:bg-[#F2A33A]/30">
-      <main className="w-full max-w-md min-h-[100dvh] px-5 sm:px-6 pt-[max(20px,env(safe-area-inset-top))] pb-[max(120px,calc(env(safe-area-inset-bottom)+96px))] relative">
+    <div className="h-full min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-[#EEF3F6] text-[#17212B] flex justify-center selection:bg-[#F2A33A]/30">
+      <main className="w-full max-w-md min-h-[100dvh] overflow-x-hidden px-4 sm:px-6 pt-[max(20px,env(safe-area-inset-top))] pb-[max(120px,calc(env(safe-area-inset-bottom)+96px))] relative">
         {/* ================= SCREEN 1: TODAY ================= */}
         {currentTab === 'today' && (
           <div className="space-y-4">

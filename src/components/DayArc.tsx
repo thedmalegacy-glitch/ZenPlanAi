@@ -86,12 +86,11 @@ export const DayArc: React.FC<DayArcProps> = ({
   const scheduledTasks = tasks.filter((t) => !!t.startTime);
 
   return (
-    <div className={`relative flex flex-col items-center justify-center select-none ${className}`}>
+    <div className={`relative w-full max-w-full flex flex-col items-center justify-center select-none overflow-hidden ${className}`}>
       <svg
-        width={width}
-        height={height}
         viewBox={`0 0 ${width} ${height}`}
-        className="overflow-visible"
+        className="w-full max-w-[342px] h-auto overflow-visible"
+        style={{ aspectRatio: `${width}/${height}` }}
         role="img"
         aria-label={`Daylight Orbit Arc: ${centerPrimary || ''} ${centerSecondary || ''}`}
       >

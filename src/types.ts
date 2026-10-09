@@ -38,6 +38,8 @@ export interface WorkoutExercise {
   category: 'strength' | 'cardio' | 'mobility' | 'core';
   targetMuscle: string;
   defaultDurationMin: number;
+  equipment?: 'dumbbells' | 'bodyweight' | 'none';
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
   instructions: string[];
   tips: string;
 }

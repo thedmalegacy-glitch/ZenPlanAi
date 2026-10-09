@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>ZenPlan AI</title>
     <meta name="description" content="A minimalist, mobile-first planner and fitness trainer that blends daily task management with AI-guided workouts for busy lives." />
     <meta property="og:title" content="ZenPlan AI" />
@@ -13,6 +13,15 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <script>
+      // Early capture of PWA beforeinstallprompt to ensure it is never missed
+      window.__deferredPWAInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__deferredPWAInstallPrompt = e;
+        window.dispatchEvent(new CustomEvent('pwa-prompt-captured'));
+      });
+    </script>
     <script>
       (function () {
         try {

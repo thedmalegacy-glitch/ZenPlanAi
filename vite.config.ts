@@ -24,8 +24,8 @@ export default defineConfig(() => {
           short_name: 'ZenPlan',
           description:
             'A calm, mobile-first daily task planner and leveled fitness trainer with AI assistance.',
-          theme_color: '#F5F6F8',
-          background_color: '#F5F6F8',
+          theme_color: '#EEF3F6',
+          background_color: '#EEF3F6',
           display: 'standalone',
           start_url: '/',
           scope: '/',
