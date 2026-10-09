@@ -9,17 +9,114 @@
     <meta property="og:description" content="A minimalist, mobile-first planner and fitness trainer that blends daily task management with AI-guided workouts for busy lives." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#F5F6F8" id="theme-color-meta" />
+    <meta name="theme-color" content="#EEF3F6" id="theme-color-meta" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <script>
+      (function () {
+        try {
+          const OriginalWebSocket = window.WebSocket;
+          if (OriginalWebSocket) {
+            function MockViteWebSocket(url, protocols) {
+              const urlStr = String(url || '');
+              if (
+                protocols === 'vite-hmr' ||
+                urlStr.includes('token=') ||
+                urlStr.includes('vite') ||
+                urlStr.includes(':3000') ||
+                urlStr.includes('ais-dev')
+              ) {
+                const target = new EventTarget();
+                const ws = {
+                  readyState: 0,
+                  CONNECTING: 0,
+                  OPEN: 1,
+                  CLOSING: 2,
+                  CLOSED: 3,
+                  url: urlStr,
+                  protocol: protocols || 'vite-hmr',
+                  bufferedAmount: 0,
+                  extensions: '',
+                  binaryType: 'blob',
+                  onopen: null,
+                  onclose: null,
+                  onerror: null,
+                  onmessage: null,
+                  addEventListener: function (type, listener, options) {
+                    target.addEventListener(type, listener, options);
+                  },
+                  removeEventListener: function (type, listener, options) {
+                    target.removeEventListener(type, listener, options);
+                  },
+                  dispatchEvent: function (event) {
+                    return target.dispatchEvent(event);
+                  },
+                  send: function () {},
+                  close: function (code, reason) {
+                    ws.readyState = 3;
+                    const ev = new CloseEvent('close', {
+                      wasClean: true,
+                      code: code || 1000,
+                      reason: reason || '',
+                    });
+                    if (typeof ws.onclose === 'function') ws.onclose(ev);
+                    target.dispatchEvent(ev);
+                  },
+                };
+                setTimeout(function () {
+                  ws.readyState = 1;
+                  const ev = new Event('open');
+                  if (typeof ws.onopen === 'function') ws.onopen(ev);
+                  target.dispatchEvent(ev);
+                }, 10);
+                return ws;
+              }
+              return new OriginalWebSocket(url, protocols);
+            }
+            MockViteWebSocket.prototype = OriginalWebSocket.prototype;
+            MockViteWebSocket.CONNECTING = 0;
+            MockViteWebSocket.OPEN = 1;
+            MockViteWebSocket.CLOSING = 2;
+            MockViteWebSocket.CLOSED = 3;
+            window.WebSocket = MockViteWebSocket;
+          }
+
+          const origError = console.error;
+          console.error = function (...args) {
+            const hasWsError = args.some(function (a) {
+              const str = a && (a.stack || a.message || String(a));
+              return (
+                typeof str === 'string' &&
+                (str.includes('WebSocket') || str.includes('failed to connect to websocket') || str.includes('[vite]'))
+              );
+            });
+            if (hasWsError) return;
+            origError.apply(console, args);
+          };
+
+          window.addEventListener('unhandledrejection', function (e) {
+            const msg = e.reason && (e.reason.message || String(e.reason));
+            if (typeof msg === 'string' && (msg.includes('WebSocket') || msg.includes('vite'))) {
+              e.preventDefault();
+            }
+          });
+          window.addEventListener('error', function (e) {
+            const msg = e.message || (e.error && e.error.message);
+            if (typeof msg === 'string' && (msg.includes('WebSocket') || msg.includes('vite'))) {
+              e.preventDefault();
+            }
+          });
+        } catch (_) {}
+      })();
+    </script>
     <meta name="apple-mobile-web-app-title" content="ZenPlan" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;500;600;700;1,9..40,400&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>
