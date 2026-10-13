@@ -10,6 +10,7 @@ import { FitnessView } from './components/FitnessView';
 import { NotesView } from './components/NotesView';
 import { NoteModal } from './components/NoteModal';
 import { AddActionChoiceModal } from './components/AddActionChoiceModal';
+import { ZenAppIntro } from './components/ZenAppIntro';
 import { ZenActionModal } from './components/ZenActionModal';
 import { InstallAppButton } from './components/InstallAppButton';
 import { NotificationSettingsButton } from './components/NotificationSettingsButton';
@@ -107,6 +108,16 @@ export default function App() {
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [noteModalDate, setNoteModalDate] = useState<string>(getTodayDateString());
   const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
+
+  // App launch intro splash screen
+  const [showIntro, setShowIntro] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowIntro(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Notifications settings & on-device reminder scheduler
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => {
@@ -651,6 +662,9 @@ export default function App() {
         settings={notificationSettings}
         onSaveSettings={handleUpdateNotificationSettings}
       />
+
+      {/* Modern Circular Animated Intro Splash Screen */}
+      {showIntro && <ZenAppIntro onDismiss={() => setShowIntro(false)} />}
     </div>
   );
 }

@@ -1,5 +1,70 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="112" fill="#3D4DF2" />
-  <circle cx="256" cy="256" r="156" fill="none" stroke="#FFFFFF" stroke-width="28" stroke-opacity="0.22" />
-  <path d="M176 262L228 314L340 198" fill="none" stroke="#FFFFFF" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" />
+  <defs>
+    <!-- Smooth circular background gradient: Deep navy to obsidian -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E2A38" />
+      <stop offset="100%" stop-color="#101720" />
+    </linearGradient>
+
+    <!-- Sun aura glow -->
+    <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#F2A33A" stop-opacity="0.9" />
+      <stop offset="60%" stop-color="#E4572E" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#E4572E" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Daylight orbit arc gradient -->
+    <linearGradient id="orbitGrad" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#2F3E8F" />
+      <stop offset="35%" stop-color="#2A8C8C" />
+      <stop offset="70%" stop-color="#F2A33A" />
+      <stop offset="100%" stop-color="#E4572E" />
+    </linearGradient>
+  </defs>
+
+  <!-- Circular Outer Badge (Perfect rounded organic circle, NOT square) -->
+  <circle cx="256" cy="256" r="248" fill="url(#bgGrad)" />
+
+  <!-- Outer subtle zen ring -->
+  <circle cx="256" cy="256" r="226" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.08" />
+
+  <!-- Ambient Golden Glow behind center orbit -->
+  <circle cx="256" cy="240" r="140" fill="url(#sunGlow)" />
+
+  <!-- Outer Orbit Track Arc (06:00 to 22:00 daylight arch) -->
+  <path
+    d="M 120 300 A 150 150 0 1 1 392 300"
+    fill="none"
+    stroke="url(#orbitGrad)"
+    stroke-width="26"
+    stroke-linecap="round"
+  />
+
+  <!-- Inner Zen Enso Arc -->
+  <path
+    d="M 160 320 A 110 110 0 1 1 352 320"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="12"
+    stroke-linecap="round"
+    stroke-opacity="0.25"
+    stroke-dasharray="8 6"
+  />
+
+  <!-- Radiant Golden Sun Node on the Orbit -->
+  <circle cx="340" cy="180" r="28" fill="#F2A33A" />
+  <circle cx="340" cy="180" r="18" fill="#FFF2D6" />
+
+  <!-- Zen Focus Diamond / Compass Core in Center -->
+  <g transform="translate(256, 260)">
+    <circle cx="0" cy="0" r="38" fill="#17212B" stroke="#F2A33A" stroke-width="4" />
+    <path
+      d="M -12 2 L -2 12 L 14 -6"
+      fill="none"
+      stroke="#FFFFFF"
+      stroke-width="5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </g>
 </svg>
