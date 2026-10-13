@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Task, DailyThought, WorkoutExercise } from './types';
+import { Task, DailyThought, WorkoutExercise, Note, NoteCategory } from './types';
 import { DayArc } from './components/DayArc';
 import { DailyThoughtCard } from './components/DailyThoughtCard';
 import { TaskItem } from './components/TaskItem';
@@ -7,7 +7,9 @@ import { TaskModal } from './components/TaskModal';
 import { BottomNav, NavTab } from './components/BottomNav';
 import { UpcomingTimeline } from './components/UpcomingTimeline';
 import { FitnessView } from './components/FitnessView';
-import { DoneView } from './components/DoneView';
+import { NotesView } from './components/NotesView';
+import { NoteModal } from './components/NoteModal';
+import { AddActionChoiceModal } from './components/AddActionChoiceModal';
 import { ZenActionModal } from './components/ZenActionModal';
 import { InstallAppButton } from './components/InstallAppButton';
 import { NotificationSettingsButton } from './components/NotificationSettingsButton';
@@ -21,6 +23,7 @@ import {
 } from './utils/notifications';
 
 const STORAGE_KEY_TASKS = 'zenplan_orbit_tasks_v1';
+const STORAGE_KEY_NOTES = 'zenplan_orbit_notes_v1';
 const STORAGE_KEY_THOUGHT = 'zenplan_orbit_thought_idx';
 
 const MOTIVATIONAL_THOUGHTS: DailyThought[] = [
@@ -63,6 +66,23 @@ export default function App() {
     return [];
   });
 
+  // Notes state (date-wise)
+  const [notes, setNotes] = useState<Note[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_NOTES);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          // Filter out any demo note
+          return parsed.filter((n: Note) => n.id !== 'sample_note_1');
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return [];
+  });
+
   const [thoughtIndex, setThoughtIndex] = useState<number>(() => {
     try {
       const idx = localStorage.getItem(STORAGE_KEY_THOUGHT);
@@ -82,6 +102,12 @@ export default function App() {
   const [zenModalType, setZenModalType] = useState<'plan' | 'break' | 'review' | null>(null);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
 
+  // Notes Modals
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [noteModalDate, setNoteModalDate] = useState<string>(getTodayDateString());
+  const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
+
   // Notifications settings & on-device reminder scheduler
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => {
     return loadNotificationSettings();
@@ -95,6 +121,15 @@ export default function App() {
       console.error(e);
     }
   }, [tasks]);
+
+  // Sync notes to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_NOTES, JSON.stringify(notes));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [notes]);
 
   // Periodic reminder checking interval (every 25 seconds)
   useEffect(() => {
@@ -274,6 +309,72 @@ export default function App() {
     setTasks(rebalanced);
   };
 
+  // Note Handlers
+  const handleOpenAddNote = (date?: string) => {
+    setEditingNote(null);
+    setNoteModalDate(date || (currentTab === 'upcoming' || currentTab === 'notes' ? selectedDate : todayStr));
+    setIsNoteModalOpen(true);
+  };
+
+  const handleOpenEditNote = (note: Note) => {
+    setEditingNote(note);
+    setNoteModalDate(note.date);
+    setIsNoteModalOpen(true);
+  };
+
+  const handleSaveNote = (noteData: {
+    id?: string;
+    title: string;
+    content: string;
+    date: string;
+    category?: NoteCategory;
+  }) => {
+    if (noteData.id) {
+      // Edit existing
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === noteData.id
+            ? {
+                ...n,
+                title: noteData.title,
+                content: noteData.content,
+                date: noteData.date,
+                category: noteData.category,
+                updatedAt: Date.now(),
+              }
+            : n
+        )
+      );
+    } else {
+      // Create new
+      const newNote: Note = {
+        id: `note_${Date.now()}`,
+        title: noteData.title,
+        content: noteData.content,
+        date: noteData.date,
+        category: noteData.category || 'general',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      setNotes((prev) => [newNote, ...prev]);
+    }
+  };
+
+  const handleDeleteNote = (id: string) => {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  // Center "Add" button click handler
+  const handleBottomAddClick = () => {
+    if (currentTab === 'notes') {
+      // In Notes section: give the user 2 options (Add Task or Add Note)
+      setIsChoiceModalOpen(true);
+    } else {
+      // In Today, Upcoming, or Fitness: opens Add Task modal
+      handleOpenAddModal(currentTab === 'upcoming' ? selectedDate : todayStr);
+    }
+  };
+
   // Today calculations
   const todayStr = getTodayDateString();
   const todayTasks = tasks.filter((t) => t.date === todayStr);
@@ -282,11 +383,16 @@ export default function App() {
   const todayUrgent = todayTasks.filter((t) => !t.completed && t.priority === 'high').length;
 
   const currentThought = MOTIVATIONAL_THOUGHTS[thoughtIndex];
-  const isAnyModalOpen = isTaskModalOpen || zenModalType !== null || isNotificationModalOpen;
+  const isAnyModalOpen =
+    isTaskModalOpen ||
+    zenModalType !== null ||
+    isNotificationModalOpen ||
+    isNoteModalOpen ||
+    isChoiceModalOpen;
 
   return (
-    <div className="h-full min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-[#EEF3F6] text-[#17212B] flex justify-center selection:bg-[#F2A33A]/30">
-      <main className="w-full max-w-md min-h-[100dvh] overflow-x-hidden px-4 sm:px-6 pt-[max(20px,env(safe-area-inset-top))] pb-[max(120px,calc(env(safe-area-inset-bottom)+96px))] relative">
+    <div className="min-h-screen min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-[#EEF3F6] text-[#17212B] flex justify-center selection:bg-[#F2A33A]/30">
+      <main className="w-full max-w-md min-h-[100dvh] px-4 sm:px-6 pt-[max(20px,env(safe-area-inset-top))] pb-[max(120px,calc(env(safe-area-inset-bottom)+96px))] relative">
         {/* ================= SCREEN 1: TODAY ================= */}
         {currentTab === 'today' && (
           <div className="space-y-4">
@@ -481,14 +587,15 @@ export default function App() {
           <FitnessView onAddAsTask={handleAddFitnessAsTask} />
         )}
 
-        {/* ================= SCREEN 4: DONE ================= */}
-        {currentTab === 'done' && (
-          <DoneView
-            tasks={tasks}
-            onToggleComplete={handleToggleComplete}
-            onEditTask={handleOpenEditModal}
-            onDeleteTask={handleDeleteTask}
-            onClearAllCompleted={handleClearAllCompleted}
+        {/* ================= SCREEN 4: NOTES (Date-Wise) ================= */}
+        {currentTab === 'notes' && (
+          <NotesView
+            notes={notes}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            onAddNote={handleOpenAddNote}
+            onEditNote={handleOpenEditNote}
+            onDeleteNote={handleDeleteNote}
           />
         )}
       </main>
@@ -497,7 +604,7 @@ export default function App() {
       <BottomNav
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
-        onAddTask={() => handleOpenAddModal(currentTab === 'upcoming' ? selectedDate : todayStr)}
+        onAddTask={handleBottomAddClick}
         visible={!isAnyModalOpen}
       />
 
@@ -508,6 +615,24 @@ export default function App() {
         onSave={handleSaveTask}
         initialTask={editingTask?.id ? editingTask : null}
         defaultDate={modalDefaultDate}
+      />
+
+      {/* Add / Edit Note Modal */}
+      <NoteModal
+        isOpen={isNoteModalOpen}
+        onClose={() => setIsNoteModalOpen(false)}
+        onSave={handleSaveNote}
+        initialNote={editingNote}
+        defaultDate={noteModalDate}
+      />
+
+      {/* Dual Action Choice Modal when tapping Add in Notes section */}
+      <AddActionChoiceModal
+        isOpen={isChoiceModalOpen}
+        onClose={() => setIsChoiceModalOpen(false)}
+        onSelectTask={() => handleOpenAddModal(selectedDate)}
+        onSelectNote={() => handleOpenAddNote(selectedDate)}
+        dateLabel={formatDateLabel(selectedDate)}
       />
 
       {/* Zen Action Sheets (Plan Day, Break Goal, Review) */}

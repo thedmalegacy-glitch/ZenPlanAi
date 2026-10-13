@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type NavTab = 'today' | 'upcoming' | 'fitness' | 'done';
+export type NavTab = 'today' | 'upcoming' | 'fitness' | 'notes';
 
 interface BottomNavProps {
   currentTab: NavTab;
@@ -90,12 +90,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <span className="font-body text-[11px] font-medium leading-tight">Upcoming</span>
         </button>
 
-        {/* Tab Center: Add Task Action Button */}
+        {/* Tab Center: Add Action Button */}
         {onAddTask && (
           <button
             type="button"
             onClick={onAddTask}
-            aria-label="Add new task"
+            aria-label="Add new item"
             className="flex-1 min-h-[56px] rounded-[18px] border-none flex flex-col items-center justify-center gap-0.5 transition-all active:scale-90 cursor-pointer bg-transparent text-[#55636F] hover:bg-black/5 active:bg-black/10 group"
           >
             <div className="w-7 h-7 rounded-full bg-[#F2A33A] text-[#17212B] flex items-center justify-center shadow-xs group-hover:bg-[#e09228] transition-colors">
@@ -151,19 +151,19 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <span className="font-body text-[11px] font-medium leading-tight">Fitness</span>
         </button>
 
-        {/* Tab 4: Done */}
+        {/* Tab 4: Notes (Replaces Done) */}
         <button
           type="button"
-          onClick={() => onSelectTab('done')}
-          aria-label="Done"
-          aria-current={currentTab === 'done' ? 'page' : undefined}
+          onClick={() => onSelectTab('notes')}
+          aria-label="Notes"
+          aria-current={currentTab === 'notes' ? 'page' : undefined}
           className={`flex-1 min-h-[56px] rounded-[18px] border-none flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95 cursor-pointer ${
-            currentTab === 'done'
+            currentTab === 'notes'
               ? 'bg-[#17212B] text-white shadow-xs'
               : 'bg-transparent text-[#55636F] hover:bg-black/5 active:bg-black/10'
           }`}
         >
-          {/* Done icon: single check mark */}
+          {/* Notes icon: notepad with pen */}
           <svg
             width="20"
             height="20"
@@ -175,9 +175,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             strokeLinejoin="round"
             aria-hidden="true"
           >
-            <polyline points="20 6 9 17 4 12" />
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
           </svg>
-          <span className="font-body text-[11px] font-medium leading-tight">Done</span>
+          <span className="font-body text-[11px] font-medium leading-tight">Notes</span>
         </button>
       </div>
     </nav>

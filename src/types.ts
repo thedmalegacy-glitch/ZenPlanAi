@@ -43,3 +43,15 @@ export interface WorkoutExercise {
   instructions: string[];
   tips: string;
 }
+
+export type NoteCategory = 'reflection' | 'idea' | 'meeting' | 'journal' | 'general';
+
+export interface Note {
+  id: string;
+  date: string; // YYYY-MM-DD
+  title: string;
+  content: string;
+  category?: NoteCategory;
+  createdAt: number;
+  updatedAt: number;
+}
