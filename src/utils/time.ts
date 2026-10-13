@@ -106,3 +106,40 @@ export function addDays(dateStr: string, days: number): string {
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Sorts tasks so that:
+ * 1. Incomplete/pending tasks come first.
+ * 2. Within pending tasks, sort chronologically by scheduled startTime (e.g. 09:00, 10:00, 13:00 / 1 PM).
+ *    Tasks without time follow after timed tasks, ordered by creation.
+ * 3. Completed tasks are pushed to the bottom, sorted chronologically or by completedAt.
+ */
+export function sortTasksChronologically<T extends { completed: boolean; startTime?: string; createdAt?: number; completedAt?: number }>(
+  tasks: T[]
+): T[] {
+  return [...tasks].sort((a, b) => {
+    // Rule 1: Pending tasks first, completed tasks at the bottom
+    if (a.completed !== b.completed) {
+      return a.completed ? 1 : -1;
+    }
+
+    // Rule 2: Chronological ordering by startTime (9am -> 10am -> 1pm etc.)
+    const aTime = getMinutesSinceMidnight(a.startTime);
+    const bTime = getMinutesSinceMidnight(b.startTime);
+
+    if (aTime !== null && bTime !== null) {
+      if (aTime !== bTime) {
+        return aTime - bTime;
+      }
+    } else if (aTime !== null) {
+      return -1; // Timed tasks come before untimed tasks
+    } else if (bTime !== null) {
+      return 1;
+    }
+
+    // Tie-breaker: creation time ascending (earlier created first)
+    const aCreated = a.createdAt || 0;
+    const bCreated = b.createdAt || 0;
+    return aCreated - bCreated;
+  });
+}

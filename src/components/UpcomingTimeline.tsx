@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Task } from '../types';
 import { DayArc } from './DayArc';
-import { addDays, formatDateLabel, formatTimeDisplay, getMinutesSinceMidnight } from '../utils/time';
+import { addDays, formatDateLabel, formatTimeDisplay, getMinutesSinceMidnight, sortTasksChronologically } from '../utils/time';
 
 interface UpcomingTimelineProps {
   tasks: Task[];
@@ -46,14 +46,9 @@ export const UpcomingTimeline: React.FC<UpcomingTimelineProps> = ({
     return { dateStr, dayInitial, dayNum };
   });
 
-  // Filter tasks for selected date
-  const dayTasks = tasks
-    .filter((t) => t.date === selectedDate)
-    .sort((a, b) => {
-      const aM = getMinutesSinceMidnight(a.startTime) ?? 9999;
-      const bM = getMinutesSinceMidnight(b.startTime) ?? 9999;
-      return aM - bM;
-    });
+  // Filter tasks for selected date (pending first chronologically by time, completed at bottom)
+  const rawDayTasks = tasks.filter((t) => t.date === selectedDate);
+  const dayTasks = sortTasksChronologically(rawDayTasks);
 
   const remainingCount = dayTasks.filter((t) => !t.completed).length;
 

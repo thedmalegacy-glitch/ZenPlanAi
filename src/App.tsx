@@ -15,7 +15,7 @@ import { ZenActionModal } from './components/ZenActionModal';
 import { InstallAppButton } from './components/InstallAppButton';
 import { NotificationSettingsButton } from './components/NotificationSettingsButton';
 import { NotificationModal } from './components/NotificationModal';
-import { getTodayDateString, formatDateLabel, addDays } from './utils/time';
+import { getTodayDateString, formatDateLabel, addDays, sortTasksChronologically } from './utils/time';
 import {
   loadNotificationSettings,
   saveNotificationSettings,
@@ -386,9 +386,10 @@ export default function App() {
     }
   };
 
-  // Today calculations
+  // Today calculations (sorted chronologically: pending first by time e.g. 9am, 10am, 1pm; completed at bottom)
   const todayStr = getTodayDateString();
-  const todayTasks = tasks.filter((t) => t.date === todayStr);
+  const rawTodayTasks = tasks.filter((t) => t.date === todayStr);
+  const todayTasks = sortTasksChronologically(rawTodayTasks);
   const todayCompleted = todayTasks.filter((t) => t.completed).length;
   const todayPending = todayTasks.filter((t) => !t.completed).length;
   const todayUrgent = todayTasks.filter((t) => !t.completed && t.priority === 'high').length;
