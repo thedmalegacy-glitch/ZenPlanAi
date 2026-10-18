@@ -55,3 +55,14 @@ export interface Note {
   createdAt: number;
   updatedAt: number;
 }
+
+export interface TaskNotificationPayload {
+  taskId: string;
+  title: string;
+  description?: string;
+  category: TaskCategory;
+  startTime?: string;
+  leadMinutes?: number;
+  type: 'lead' | 'now' | 'test';
+}
+

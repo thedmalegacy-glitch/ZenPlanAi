@@ -373,6 +373,7 @@ export const FitnessView: React.FC<FitnessViewProps> = ({ onAddAsTask }) => {
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'strength' | 'core' | 'cardio' | 'mobility'>('all');
   const [selectedEquipment, setSelectedEquipment] = useState<'all' | 'dumbbells' | 'bodyweight' | 'none'>('all');
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
+  const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
   const [addedToast, setAddedToast] = useState<string | null>(null);
 
   const filtered = EXERCISE_LIBRARY.filter((item) => {
@@ -384,8 +385,12 @@ export const FitnessView: React.FC<FitnessViewProps> = ({ onAddAsTask }) => {
   const handleScheduleExercise = (e: WorkoutExercise) => {
     if (onAddAsTask) {
       onAddAsTask(e);
-      setAddedToast(`Added "${e.name}" to today's schedule`);
-      setTimeout(() => setAddedToast(null), 2500);
+      setRecentlyAddedId(e.id);
+      setAddedToast(`Added "${e.name}" to today's schedule!`);
+      setTimeout(() => {
+        setRecentlyAddedId((curr) => (curr === e.id ? null : curr));
+        setAddedToast(null);
+      }, 2500);
     }
   };
 
@@ -573,13 +578,28 @@ export const FitnessView: React.FC<FitnessViewProps> = ({ onAddAsTask }) => {
                     type="button"
                     onClick={() => handleScheduleExercise(item)}
                     aria-label={`Schedule ${item.name} into planner`}
-                    className="min-h-[44px] min-w-[44px] px-3.5 rounded-full bg-[#E3E8F6] text-[#2F3E8F] text-xs font-bold flex items-center gap-1.5 hover:bg-[#d2dcf5] active:scale-95 transition-all cursor-pointer flex-shrink-0"
+                    className={`min-h-[44px] min-w-[44px] px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer flex-shrink-0 ${
+                      recentlyAddedId === item.id
+                        ? 'bg-[#2A8C8C] text-white shadow-xs animate-pulse'
+                        : 'bg-[#E3E8F6] text-[#2F3E8F] hover:bg-[#d2dcf5]'
+                    }`}
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    <span>Add</span>
+                    {recentlyAddedId === item.id ? (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span>Added ✓</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span>Add</span>
+                      </>
+                    )}
                   </button>
                 </div>
 

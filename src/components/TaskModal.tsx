@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Task, TaskCategory, TaskPriority, RecurrenceType, SubTask } from '../types';
-import { parseNaturalTime, formatTimeDisplay } from '../utils/time';
+import { parseNaturalTime, formatTimeDisplay, addDays } from '../utils/time';
+import {
+  isNotificationSupported,
+  getNotificationPermission,
+  requestNotificationPermission,
+} from '../utils/notifications';
+import { parseVoiceInputToTask } from '../utils/voiceParser';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -8,6 +14,8 @@ interface TaskModalProps {
   onSave: (taskData: Omit<Task, 'id' | 'createdAt'> & { id?: string }) => void;
   initialTask?: Task | null;
   defaultDate: string;
+  onDeleteTask?: (id: string) => void;
+  onMoveToNextDay?: (id: string) => void;
 }
 
 export const TaskModal: React.FC<TaskModalProps> = ({
@@ -16,6 +24,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   onSave,
   initialTask,
   defaultDate,
+  onDeleteTask,
+  onMoveToNextDay,
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -30,6 +40,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [steps, setSteps] = useState<SubTask[]>([]);
   const [newStepText, setNewStepText] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isVoiceListening, setIsVoiceListening] = useState(false);
+  const voiceRecRef = useRef<any>(null);
 
   useEffect(() => {
     if (initialTask) {
@@ -89,6 +101,65 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     setSteps(steps.filter((s) => s.id !== id));
   };
 
+  const handleVoiceDictate = () => {
+    if (isVoiceListening) {
+      if (voiceRecRef.current) {
+        try {
+          voiceRecRef.current.stop();
+        } catch {
+          // Ignore
+        }
+      }
+      setIsVoiceListening(false);
+      return;
+    }
+
+    const SpeechClass = (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).SpeechRecognition ||
+      (window as unknown as { webkitSpeechRecognition?: any }).webkitSpeechRecognition;
+
+    if (!SpeechClass) {
+      setErrorMsg('Speech recognition is not supported in this browser.');
+      return;
+    }
+
+    try {
+      const rec = new SpeechClass();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.lang = 'en-US';
+
+      rec.onstart = () => setIsVoiceListening(true);
+      rec.onerror = () => setIsVoiceListening(false);
+      rec.onend = () => setIsVoiceListening(false);
+
+      rec.onresult = (event: any) => {
+        const spoken = event.results?.[0]?.[0]?.transcript;
+        if (spoken) {
+          const parsed = parseVoiceInputToTask(spoken, date);
+          setTitle(parsed.title);
+          if (parsed.startTime) {
+            setTypedTime(parsed.startTime);
+            setParsedTime(parsed.startTime);
+          }
+          if (parsed.durationMinutes) {
+            setDurationMinutes(parsed.durationMinutes);
+          }
+          if (parsed.category) {
+            setCategory(parsed.category);
+          }
+          if (parsed.priority) {
+            setPriority(parsed.priority);
+          }
+        }
+      };
+
+      voiceRecRef.current = rec;
+      rec.start();
+    } catch {
+      setIsVoiceListening(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -96,17 +167,24 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       return;
     }
 
+    const resolvedStartTime = parsedTime || (typedTime ? parseNaturalTime(typedTime) || undefined : undefined);
+
+    // Prompt user for notification permission if scheduled with a time and not yet asked
+    if (resolvedStartTime && isNotificationSupported() && getNotificationPermission() === 'default') {
+      requestNotificationPermission().catch(() => {});
+    }
+
     onSave({
       ...(initialTask ? { id: initialTask.id } : {}),
       title: title.trim(),
       description: description.trim() || undefined,
       date,
-      startTime: parsedTime || (typedTime ? parseNaturalTime(typedTime) || undefined : undefined),
+      startTime: resolvedStartTime,
       durationMinutes: Number(durationMinutes) || 30,
       category,
       priority,
       recurrence,
-      reminderLeadMinutes: parsedTime || typedTime ? Number(reminderLeadMinutes) : undefined,
+      reminderLeadMinutes: resolvedStartTime ? Number(reminderLeadMinutes) : undefined,
       steps,
       completed: initialTask ? initialTask.completed : false,
       completedAt: initialTask ? initialTask.completedAt : undefined,
@@ -148,11 +226,30 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
           )}
 
-          {/* Title */}
+          {/* Title with Voice Dictation */}
           <div>
-            <label htmlFor="task-title-input" className="block text-xs font-semibold uppercase tracking-wider text-[#55636F] mb-1">
-              Title *
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label htmlFor="task-title-input" className="block text-xs font-semibold uppercase tracking-wider text-[#55636F]">
+                Title *
+              </label>
+              <button
+                type="button"
+                onClick={handleVoiceDictate}
+                aria-label={isVoiceListening ? 'Stop listening' : 'Dictate task by voice'}
+                className={`min-h-[28px] px-2.5 py-0.5 rounded-full text-[11px] font-medium flex items-center gap-1 transition-all cursor-pointer ${
+                  isVoiceListening
+                    ? 'bg-[#E4572E] text-white animate-pulse'
+                    : 'bg-[#EEF3F6] text-[#55636F] hover:text-[#17212B] hover:bg-[#DDE5EA]'
+                }`}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="22" />
+                </svg>
+                <span>{isVoiceListening ? 'Listening...' : 'Speak'}</span>
+              </button>
+            </div>
             <input
               id="task-title-input"
               type="text"
@@ -182,9 +279,23 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           {/* Date and Typed Time */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label htmlFor="task-date-input" className="block text-xs font-semibold uppercase tracking-wider text-[#55636F] mb-1">
-                Date
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="task-date-input" className="block text-xs font-semibold uppercase tracking-wider text-[#55636F]">
+                  Date
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setDate((prev) => addDays(prev || defaultDate, 1))}
+                  className="text-[11px] font-semibold text-[#2F3E8F] hover:text-[#17212B] flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                  title="Shift task date forward by 1 day"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="9 18 15 12 9 6" />
+                    <line x1="5" y1="12" x2="15" y2="12" />
+                  </svg>
+                  <span>+ Move to Next Day</span>
+                </button>
+              </div>
               <input
                 id="task-date-input"
                 type="date"
@@ -316,8 +427,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <option value={30}>30 min before</option>
               </select>
             </div>
-            <p className="text-[11px] text-[#55636F] mt-1">
-              Sends an on-device push notification prior to task kickoff (stored 100% locally).
+            <p className="text-[11px] text-[#55636F] mt-1.5 leading-snug">
+              Sends 1st alert {reminderLeadMinutes > 0 ? `${reminderLeadMinutes} min before` : 'at start time'}{reminderLeadMinutes > 0 ? ' and 2nd alert when the task starts' : ''}, with a &quot;✓ Mark Complete&quot; button in your notification panel.
             </p>
           </div>
 
@@ -375,21 +486,62 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             )}
           </div>
 
-          {/* Submit buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#EEF3F6]">
-            <button
-              type="button"
-              onClick={onClose}
-              className="min-h-[44px] px-5 py-2.5 rounded-full border border-[#C9D4DC] text-[#55636F] text-sm font-medium hover:bg-[#EEF3F6] transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="min-h-[44px] px-6 py-2.5 rounded-full bg-[#17212B] text-white text-sm font-semibold hover:bg-black transition-colors cursor-pointer"
-            >
-              {initialTask ? 'Save Changes' : 'Create Task'}
-            </button>
+          {/* Submit & Quick Action buttons */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-[#EEF3F6]">
+            {initialTask ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                {onDeleteTask && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onDeleteTask(initialTask.id);
+                      onClose();
+                    }}
+                    className="min-h-[44px] px-3.5 py-2 rounded-full border border-[#FBE3DC] bg-[#FEF4F2] text-[#E4572E] text-xs font-semibold hover:bg-[#FBE3DC] active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 6h18" />
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                    </svg>
+                    <span>Delete</span>
+                  </button>
+                )}
+
+                {onMoveToNextDay && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onMoveToNextDay(initialTask.id);
+                      onClose();
+                    }}
+                    className="min-h-[44px] px-3.5 py-2 rounded-full border border-[#DDE5EA] bg-[#EEF3F6] text-[#2F3E8F] text-xs font-semibold hover:bg-[#E3E8F6] active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="9 18 15 12 9 6" />
+                      <line x1="5" y1="12" x2="15" y2="12" />
+                    </svg>
+                    <span>Move to Next Day</span>
+                  </button>
+                )}
+              </div>
+            ) : <div />}
+
+            <div className="flex items-center justify-end gap-3 ml-auto">
+              <button
+                type="button"
+                onClick={onClose}
+                className="min-h-[44px] px-5 py-2.5 rounded-full border border-[#C9D4DC] text-[#55636F] text-sm font-medium hover:bg-[#EEF3F6] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="min-h-[44px] px-6 py-2.5 rounded-full bg-[#17212B] text-white text-sm font-semibold hover:bg-black transition-colors cursor-pointer"
+              >
+                {initialTask ? 'Save Changes' : 'Create Task'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

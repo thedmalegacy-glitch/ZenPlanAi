@@ -9,6 +9,7 @@ interface TaskItemProps {
   onToggleStep?: (taskId: string, stepId: string) => void;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  onMoveToNextDay: (id: string) => void;
 }
 
 export const TaskItem: React.FC<TaskItemProps> = ({
@@ -17,6 +18,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   onToggleStep,
   onEdit,
   onDelete,
+  onMoveToNextDay,
 }) => {
   const [showSteps, setShowSteps] = useState(false);
 
@@ -160,29 +162,57 @@ export const TaskItem: React.FC<TaskItemProps> = ({
           </div>
         </div>
 
-        {/* Action Menu / Delete Button */}
-        <div className="flex items-center gap-1">
+        {/* Action Column: Top Edit, Middle Delete, Bottom Move to Next Day */}
+        <div className="flex flex-col items-center justify-start gap-1 flex-shrink-0 self-start -mr-1 -mt-1">
+          {/* 1. Edit Button (On Top) */}
           <button
             type="button"
-            onClick={() => onEdit(task)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(task);
+            }}
             aria-label={`Edit ${task.title}`}
-            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-[#55636F] hover:text-[#17212B] hover:bg-[#EEF3F6] active:scale-90 active:bg-[#DDE5EA] transition-all cursor-pointer"
+            title="Edit task"
+            className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl text-[#55636F] hover:text-[#17212B] hover:bg-[#EEF3F6] active:scale-90 active:bg-[#DDE5EA] transition-all cursor-pointer"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
               <path d="m15 5 4 4" />
             </svg>
           </button>
+
+          {/* 2. Delete Button (Below That) */}
           <button
             type="button"
-            onClick={() => onDelete(task.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(task.id);
+            }}
             aria-label={`Delete ${task.title}`}
-            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-[#55636F] hover:text-[#E4572E] hover:bg-[#FBE3DC] active:scale-90 active:bg-[#F8C9BD] transition-all cursor-pointer"
+            title="Delete task"
+            className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl text-[#55636F] hover:text-[#E4572E] hover:bg-[#FBE3DC] active:scale-90 active:bg-[#F8C9BD] transition-all cursor-pointer"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 6h18" />
               <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
               <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+            </svg>
+          </button>
+
+          {/* 3. Move to Next Day Button (Below That) */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onMoveToNextDay(task.id);
+            }}
+            aria-label={`Move ${task.title} to next day`}
+            title="Move to next day (+1 day)"
+            className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl text-[#55636F] hover:text-[#2F3E8F] hover:bg-[#E3E8F6] active:scale-90 active:bg-[#D5DFE6] transition-all cursor-pointer group"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-0.5 transition-transform">
+              <polyline points="9 18 15 12 9 6" />
+              <line x1="5" y1="12" x2="15" y2="12" />
             </svg>
           </button>
         </div>

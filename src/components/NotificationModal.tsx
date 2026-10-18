@@ -6,12 +6,14 @@ import {
   requestNotificationPermission,
   sendTestNotification,
 } from '../utils/notifications';
+import { TaskNotificationPayload } from '../types';
 
 interface NotificationModalProps {
   isOpen: boolean;
   onClose: () => void;
   settings: NotificationSettings;
   onSaveSettings: (settings: NotificationSettings) => void;
+  onTriggerTestBanner?: (payload: TaskNotificationPayload) => void;
 }
 
 export const NotificationModal: React.FC<NotificationModalProps> = ({
@@ -19,6 +21,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   onClose,
   settings,
   onSaveSettings,
+  onTriggerTestBanner,
 }) => {
   const [enabled, setEnabled] = useState(settings.enabled);
   const [leadMinutes, setLeadMinutes] = useState(settings.leadMinutes);
@@ -59,7 +62,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       setPermission(res);
       if (res !== 'granted') return;
     }
-    const ok = await sendTestNotification();
+    const ok = await sendTestNotification(onTriggerTestBanner);
     if (ok) {
       setTestSent(true);
       setTimeout(() => setTestSent(false), 4000);
@@ -68,14 +71,14 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs animate-fadeIn"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="notification-modal-title"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-white rounded-t-[24px] sm:rounded-[20px] border border-[#DDE5EA] p-6 shadow-2xl space-y-5"
+        className="w-full max-w-md my-auto bg-white rounded-[24px] border border-[#DDE5EA] p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-3 border-b border-[#EEF3F6]">
@@ -161,9 +164,23 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 <option value={15}>15 minutes before start</option>
                 <option value={30}>30 minutes before start</option>
               </select>
-              <p className="text-[11px] text-[#55636F]">
-                You can also customize the notification lead time individually on any task.
-              </p>
+              <div className="p-3 rounded-xl bg-[#FFF3D6] text-[#8A5A0C] text-[11px] leading-relaxed space-y-1">
+                <p className="font-semibold text-xs text-[#17212B] flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#F2A33A]" />
+                  Dual Reminder Schedule:
+                </p>
+                <p>
+                  <strong>1st Alert:</strong> Arrives at your chosen lead time (e.g. {leadMinutes === 0 ? 'at start' : `${leadMinutes} mins before`}).
+                </p>
+                {leadMinutes > 0 && (
+                  <p>
+                    <strong>2nd Alert:</strong> Arrives at the exact moment the task starts.
+                  </p>
+                )}
+                <p className="text-[10px] opacity-90 pt-0.5">
+                  Both alerts show the title, description, and an instant <strong>&quot;✓ Mark Complete&quot;</strong> button right in your notification panel.
+                </p>
+              </div>
             </div>
 
             {/* On-device Storage Note */}

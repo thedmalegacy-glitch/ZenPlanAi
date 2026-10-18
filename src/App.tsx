@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Task, DailyThought, WorkoutExercise, Note, NoteCategory } from './types';
+import { Task, DailyThought, WorkoutExercise, Note, NoteCategory, TaskNotificationPayload } from './types';
 import { DayArc } from './components/DayArc';
 import { DailyThoughtCard } from './components/DailyThoughtCard';
 import { TaskItem } from './components/TaskItem';
@@ -15,12 +15,18 @@ import { ZenActionModal } from './components/ZenActionModal';
 import { InstallAppButton } from './components/InstallAppButton';
 import { NotificationSettingsButton } from './components/NotificationSettingsButton';
 import { NotificationModal } from './components/NotificationModal';
-import { getTodayDateString, formatDateLabel, addDays, sortTasksChronologically } from './utils/time';
+import { AnimatedNotificationBanner } from './components/AnimatedNotificationBanner';
+import { VoiceTaskModal } from './components/VoiceTaskModal';
+import { AppToast, ToastNotification } from './components/AppToast';
+import { ParsedVoiceTask } from './utils/voiceParser';
+import { getTodayDateString, formatDateLabel, formatTimeDisplay, addDays, sortTasksChronologically } from './utils/time';
 import {
   loadNotificationSettings,
   saveNotificationSettings,
   checkAndTriggerTaskReminders,
   NotificationSettings,
+  playNotificationChime,
+  triggerDeviceVibration,
 } from './utils/notifications';
 
 const STORAGE_KEY_TASKS = 'zenplan_orbit_tasks_v1';
@@ -109,6 +115,119 @@ export default function App() {
   const [noteModalDate, setNoteModalDate] = useState<string>(getTodayDateString());
   const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
 
+  // Voice Task Modal
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+
+  // Install App PWA Modal
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+
+  // App notification toast (Task deleted with undo, workout added, etc.)
+  const [appToast, setAppToast] = useState<ToastNotification | null>(null);
+
+  // Mobile back button & double-back exit confirmation toast
+  const [showExitToast, setShowExitToast] = useState(false);
+  const lastBackPressTimeRef = React.useRef<number>(0);
+  const exitToastTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Animated In-App Notification Banner State
+  const [activeBannerNotification, setActiveBannerNotification] = useState<TaskNotificationPayload | null>(null);
+
+  // Keep ref in sync so popstate listener always reads fresh modal status without listener re-binding
+  const openModalsRef = React.useRef({
+    isTaskModalOpen: false,
+    isNoteModalOpen: false,
+    isChoiceModalOpen: false,
+    isZenModalOpen: false,
+    isNotificationModalOpen: false,
+    isVoiceModalOpen: false,
+    isInstallModalOpen: false,
+  });
+
+  useEffect(() => {
+    openModalsRef.current = {
+      isTaskModalOpen,
+      isNoteModalOpen,
+      isChoiceModalOpen,
+      isZenModalOpen: zenModalType !== null,
+      isNotificationModalOpen,
+      isVoiceModalOpen,
+      isInstallModalOpen,
+    };
+  }, [isTaskModalOpen, isNoteModalOpen, isChoiceModalOpen, zenModalType, isNotificationModalOpen, isVoiceModalOpen, isInstallModalOpen]);
+
+  // Mobile Back Button Navigation Engine (popstate handling)
+  useEffect(() => {
+    // 1. Initialize root state barrier so back press at root doesn't abruptly quit without prompt
+    if (!window.history.state || !window.history.state.__zenplan) {
+      window.history.replaceState({ tab: 'today', modal: null, isRoot: true, __zenplan: true }, '');
+      window.history.pushState({ tab: 'today', modal: null, isRoot: false, __zenplan: true }, '');
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state;
+      const modals = openModalsRef.current;
+      const anyModalWasOpen =
+        modals.isTaskModalOpen ||
+        modals.isNoteModalOpen ||
+        modals.isChoiceModalOpen ||
+        modals.isZenModalOpen ||
+        modals.isNotificationModalOpen ||
+        modals.isVoiceModalOpen;
+
+      // Case A: A modal was open. The mobile back button pops that modal!
+      if (anyModalWasOpen) {
+        setIsTaskModalOpen(false);
+        setIsNoteModalOpen(false);
+        setIsChoiceModalOpen(false);
+        setZenModalType(null);
+        setIsNotificationModalOpen(false);
+        setIsVoiceModalOpen(false);
+        setEditingTask(null);
+        setEditingNote(null);
+
+        // Keep current tab aligned with history state
+        if (state?.tab) {
+          setCurrentTab(state.tab);
+        }
+        return;
+      }
+
+      // Case B: User reached root (Today screen)
+      if (state?.isRoot) {
+        const now = Date.now();
+        if (now - lastBackPressTimeRef.current < 2000) {
+          // Double-tap back confirmed: allow app exit
+          window.history.back();
+        } else {
+          lastBackPressTimeRef.current = now;
+          setShowExitToast(true);
+          if (exitToastTimerRef.current) clearTimeout(exitToastTimerRef.current);
+          exitToastTimerRef.current = setTimeout(() => {
+            setShowExitToast(false);
+          }, 2000);
+
+          // Restore active barrier state so user stays safely inside Today screen
+          window.history.pushState({ tab: 'today', modal: null, isRoot: false, __zenplan: true }, '');
+          setCurrentTab('today');
+        }
+        return;
+      }
+
+      // Case C: Standard screen/tab back navigation (e.g. from Notes, Upcoming, or Fitness back to Today)
+      if (state?.tab) {
+        setCurrentTab(state.tab);
+      } else {
+        setCurrentTab('today');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (exitToastTimerRef.current) clearTimeout(exitToastTimerRef.current);
+    };
+  }, []);
+
   // App launch intro splash screen
   const [showIntro, setShowIntro] = useState(true);
 
@@ -142,19 +261,71 @@ export default function App() {
     }
   }, [notes]);
 
-  // Periodic reminder checking interval (every 25 seconds)
+  // Periodic reminder checking interval (every 10 seconds, plus on focus/visibility change)
   useEffect(() => {
     if (!notificationSettings.enabled) return;
 
+    const triggerCheck = () => {
+      checkAndTriggerTaskReminders(tasks, notificationSettings, (payload) => {
+        setActiveBannerNotification(payload);
+      });
+    };
+
     // Check immediately on load/update
-    checkAndTriggerTaskReminders(tasks, notificationSettings);
+    triggerCheck();
 
-    const interval = setInterval(() => {
-      checkAndTriggerTaskReminders(tasks, notificationSettings);
-    }, 25000);
+    // Check every 10 seconds
+    const interval = setInterval(triggerCheck, 10000);
 
-    return () => clearInterval(interval);
+    // Also check immediately when app resumes visibility or receives window focus
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        triggerCheck();
+      }
+    };
+
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+    };
   }, [tasks, notificationSettings]);
+
+  // Listen for notification action clicks from Service Worker (e.g. Android notification panel "✓ Mark Complete")
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+      const handleSWMessage = (event: MessageEvent) => {
+        if (event.data && event.data.type === 'ZENPLAN_TASK_ACTION' && event.data.action === 'complete') {
+          const taskId = event.data.taskId;
+          if (taskId) {
+            handleToggleComplete(taskId, true);
+            setActiveBannerNotification(null);
+          }
+        }
+      };
+
+      navigator.serviceWorker.addEventListener('message', handleSWMessage);
+      return () => navigator.serviceWorker.removeEventListener('message', handleSWMessage);
+    }
+  }, []);
+
+  // Handle URL query parameter if opened from notification action click while app was closed
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const completeTaskId = urlParams.get('completeTaskId');
+      if (completeTaskId) {
+        handleToggleComplete(completeTaskId, true);
+        const cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState(window.history.state, '', cleanUrl);
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
 
   const handleUpdateNotificationSettings = (newSettings: NotificationSettings) => {
     setNotificationSettings(newSettings);
@@ -168,11 +339,13 @@ export default function App() {
   };
 
   // Task Handlers
-  const handleToggleComplete = (id: string) => {
+  const handleToggleComplete = (id: string, forceComplete?: boolean) => {
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === id) {
-          const newCompleted = !t.completed;
+          const newCompleted = forceComplete !== undefined ? forceComplete : !t.completed;
+          if (t.completed === newCompleted) return t;
+
           const updated: Task = {
             ...t,
             completed: newCompleted,
@@ -254,23 +427,145 @@ export default function App() {
   };
 
   const handleDeleteTask = (id: string) => {
+    const taskToDelete = tasks.find((t) => t.id === id);
+    if (!taskToDelete) return;
+
     setTasks((prev) => prev.filter((t) => t.id !== id));
+    triggerDeviceVibration();
+
+    // Notify user with undo capability
+    setAppToast({
+      id: `del_${Date.now()}`,
+      type: 'delete',
+      message: `Task "${taskToDelete.title}" deleted`,
+      subtext: taskToDelete.startTime ? `Was set for ${formatTimeDisplay(taskToDelete.startTime)}` : undefined,
+      actionLabel: 'Undo',
+      onAction: () => {
+        setTasks((prev) => [taskToDelete, ...prev]);
+        setAppToast({
+          id: `restored_${Date.now()}`,
+          type: 'info',
+          message: `Restored "${taskToDelete.title}"`,
+          durationMs: 2500,
+        });
+      },
+      durationMs: 5000,
+    });
+  };
+
+  const handleMoveToNextDay = (id: string) => {
+    const taskToMove = tasks.find((t) => t.id === id);
+    if (!taskToMove) return;
+
+    const nextDate = addDays(taskToMove.date, 1);
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, date: nextDate } : t))
+    );
+    triggerDeviceVibration();
+
+    setAppToast({
+      id: `move_${Date.now()}`,
+      type: 'info',
+      message: `Moved "${taskToMove.title}" to next day (${formatDateLabel(nextDate)})`,
+      actionLabel: 'Undo',
+      onAction: () => {
+        setTasks((prev) =>
+          prev.map((t) => (t.id === id ? { ...t, date: taskToMove.date } : t))
+        );
+      },
+      durationMs: 4500,
+    });
   };
 
   const handleClearAllCompleted = () => {
+    const completedTasks = tasks.filter((t) => t.completed);
+    if (completedTasks.length === 0) return;
+
     setTasks((prev) => prev.filter((t) => !t.completed));
+    triggerDeviceVibration();
+
+    setAppToast({
+      id: `clear_${Date.now()}`,
+      type: 'delete',
+      message: `Cleared ${completedTasks.length} completed tasks`,
+      actionLabel: 'Undo',
+      onAction: () => {
+        setTasks((prev) => [...prev, ...completedTasks]);
+      },
+      durationMs: 5000,
+    });
   };
 
-  const handleOpenAddModal = (date?: string, defaultTime?: string) => {
+  // Tab Selection with browser history push
+  const handleSelectTab = (tab: NavTab) => {
+    if (tab === currentTab) return;
+
+    // Close any modal if open
+    setIsTaskModalOpen(false);
+    setIsNoteModalOpen(false);
+    setIsChoiceModalOpen(false);
+    setZenModalType(null);
+    setIsNotificationModalOpen(false);
+    setIsVoiceModalOpen(false);
     setEditingTask(null);
-    setModalDefaultDate(date || getTodayDateString());
+    setEditingNote(null);
+
+    window.history.pushState({ tab, modal: null, isRoot: false, __zenplan: true }, '');
+    setCurrentTab(tab);
+  };
+
+  const openModalInHistory = (modalName: string, replace = false) => {
+    const currentState = window.history.state;
+    const nextState = {
+      tab: currentTab,
+      modal: modalName,
+      isRoot: false,
+      __zenplan: true,
+    };
+    if (replace || currentState?.modal) {
+      window.history.replaceState(nextState, '');
+    } else {
+      window.history.pushState(nextState, '');
+    }
+  };
+
+  const handleOpenAddModal = (date?: string, defaultTime?: string, replace = false) => {
+    setEditingTask(
+      defaultTime
+        ? {
+            id: '',
+            title: '',
+            date: date || getTodayDateString(),
+            startTime: defaultTime,
+            durationMinutes: 45,
+            category: 'work',
+            priority: 'medium',
+            completed: false,
+            recurrence: 'none',
+            steps: [],
+            createdAt: Date.now(),
+          }
+        : null
+    );
+    setModalDefaultDate(date || (currentTab === 'upcoming' || currentTab === 'notes' ? selectedDate : getTodayDateString()));
+    openModalInHistory('task', replace);
+    setIsChoiceModalOpen(false);
     setIsTaskModalOpen(true);
   };
 
   const handleOpenEditModal = (task: Task) => {
     setEditingTask(task);
     setModalDefaultDate(task.date);
+    openModalInHistory('task');
     setIsTaskModalOpen(true);
+  };
+
+  const handleCloseTaskModal = () => {
+    setIsTaskModalOpen(false);
+    setEditingTask(null);
+    if (window.history.state?.modal === 'task') {
+      window.history.back();
+    }
   };
 
   const handleAddFitnessAsTask = (ex: WorkoutExercise) => {
@@ -293,6 +588,84 @@ export default function App() {
       createdAt: Date.now(),
     };
     setTasks((prev) => [newTask, ...prev]);
+    playNotificationChime();
+    triggerDeviceVibration();
+
+    // In-app notification toast for fitness addition
+    setAppToast({
+      id: `fit_${Date.now()}`,
+      type: 'fitness_added',
+      message: `Workout "${ex.name}" added to Today!`,
+      subtext: `${ex.defaultDurationMin} mins • Added to your schedule`,
+      actionLabel: 'View Today',
+      onAction: () => {
+        handleSelectTab('today');
+      },
+      durationMs: 4500,
+    });
+  };
+
+  // Voice Task Handlers
+  const handleOpenVoiceModal = (replace = false) => {
+    openModalInHistory('voice', replace);
+    setIsChoiceModalOpen(false);
+    setIsVoiceModalOpen(true);
+  };
+
+  const handleCloseVoiceModal = () => {
+    setIsVoiceModalOpen(false);
+    if (window.history.state?.modal === 'voice') {
+      window.history.back();
+    }
+  };
+
+  const handleVoiceSaveTask = (taskData: Omit<Task, 'id' | 'createdAt'> & { id?: string }) => {
+    handleSaveTask(taskData);
+    playNotificationChime();
+    triggerDeviceVibration();
+
+    setAppToast({
+      id: `voice_${Date.now()}`,
+      type: 'task_added',
+      message: `Task "${taskData.title}" added!`,
+      subtext: taskData.startTime
+        ? `Scheduled for ${formatTimeDisplay(taskData.startTime)} • ${formatDateLabel(taskData.date)}`
+        : `Added for ${formatDateLabel(taskData.date)}`,
+      actionLabel: 'View',
+      onAction: () => {
+        if (taskData.date === todayStr) {
+          handleSelectTab('today');
+        } else {
+          setSelectedDate(taskData.date);
+          handleSelectTab('upcoming');
+        }
+      },
+      durationMs: 4500,
+    });
+  };
+
+  const handleVoiceEditInModal = (parsed: ParsedVoiceTask) => {
+    setEditingTask({
+      id: '',
+      title: parsed.title,
+      date: parsed.date,
+      startTime: parsed.startTime,
+      durationMinutes: parsed.durationMinutes,
+      category: parsed.category,
+      priority: parsed.priority,
+      completed: false,
+      steps: [],
+      createdAt: Date.now(),
+    });
+    setModalDefaultDate(parsed.date);
+    openModalInHistory('task', true);
+    setIsVoiceModalOpen(false);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleChoiceSelectVoice = () => {
+    setIsChoiceModalOpen(false);
+    handleOpenVoiceModal(true);
   };
 
   // Subtask attachment from Zen Action
@@ -321,16 +694,73 @@ export default function App() {
   };
 
   // Note Handlers
-  const handleOpenAddNote = (date?: string) => {
+  const handleOpenAddNote = (date?: string, replace = false) => {
     setEditingNote(null);
     setNoteModalDate(date || (currentTab === 'upcoming' || currentTab === 'notes' ? selectedDate : todayStr));
+    openModalInHistory('note', replace);
+    setIsChoiceModalOpen(false);
     setIsNoteModalOpen(true);
   };
 
   const handleOpenEditNote = (note: Note) => {
     setEditingNote(note);
     setNoteModalDate(note.date);
+    openModalInHistory('note');
     setIsNoteModalOpen(true);
+  };
+
+  const handleCloseNoteModal = () => {
+    setIsNoteModalOpen(false);
+    setEditingNote(null);
+    if (window.history.state?.modal === 'note') {
+      window.history.back();
+    }
+  };
+
+  const handleOpenChoiceModal = () => {
+    openModalInHistory('choice');
+    setIsChoiceModalOpen(true);
+  };
+
+  const handleCloseChoiceModal = () => {
+    setIsChoiceModalOpen(false);
+    if (window.history.state?.modal === 'choice') {
+      window.history.back();
+    }
+  };
+
+  const handleChoiceSelectTask = () => {
+    setIsChoiceModalOpen(false);
+    handleOpenAddModal(selectedDate, undefined, true);
+  };
+
+  const handleChoiceSelectNote = () => {
+    setIsChoiceModalOpen(false);
+    handleOpenAddNote(selectedDate, true);
+  };
+
+  const handleOpenZenModal = (type: 'plan' | 'break' | 'review') => {
+    openModalInHistory('zen');
+    setZenModalType(type);
+  };
+
+  const handleCloseZenModal = () => {
+    setZenModalType(null);
+    if (window.history.state?.modal === 'zen') {
+      window.history.back();
+    }
+  };
+
+  const handleOpenNotificationModal = () => {
+    openModalInHistory('notification');
+    setIsNotificationModalOpen(true);
+  };
+
+  const handleCloseNotificationModal = () => {
+    setIsNotificationModalOpen(false);
+    if (window.history.state?.modal === 'notification') {
+      window.history.back();
+    }
   };
 
   const handleSaveNote = (noteData: {
@@ -376,14 +806,10 @@ export default function App() {
   };
 
   // Center "Add" button click handler
+  // Center "Add" button click handler
   const handleBottomAddClick = () => {
-    if (currentTab === 'notes') {
-      // In Notes section: give the user 2 options (Add Task or Add Note)
-      setIsChoiceModalOpen(true);
-    } else {
-      // In Today, Upcoming, or Fitness: opens Add Task modal
-      handleOpenAddModal(currentTab === 'upcoming' ? selectedDate : todayStr);
-    }
+    // Open choice modal offering: Add with Voice, Add Note, or Add Task
+    handleOpenChoiceModal();
   };
 
   // Today calculations (sorted chronologically: pending first by time e.g. 9am, 10am, 1pm; completed at bottom)
@@ -400,7 +826,9 @@ export default function App() {
     zenModalType !== null ||
     isNotificationModalOpen ||
     isNoteModalOpen ||
-    isChoiceModalOpen;
+    isChoiceModalOpen ||
+    isVoiceModalOpen ||
+    isInstallModalOpen;
 
   return (
     <div className="min-h-screen min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-[#EEF3F6] text-[#17212B] flex justify-center selection:bg-[#F2A33A]/30">
@@ -422,14 +850,31 @@ export default function App() {
                 </p>
               </div>
 
-              {/* Action buttons: Reminders & Install App */}
+              {/* Action buttons: Voice, Reminders & Install App */}
               <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                <button
+                  type="button"
+                  onClick={() => handleOpenVoiceModal()}
+                  aria-label="Add task with voice"
+                  title="Speak task to add"
+                  className="min-h-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] font-medium font-body bg-white border border-[#DDE5EA] text-[#17212B] hover:bg-[#EEF3F6] hover:border-[#17212B] active:scale-95 transition-all cursor-pointer shadow-2xs"
+                >
+                  <div className="w-4 h-4 rounded-full bg-[#17212B] text-white flex items-center justify-center">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="22" />
+                    </svg>
+                  </div>
+                  <span>Voice</span>
+                </button>
+
                 <NotificationSettingsButton
                   settings={notificationSettings}
-                  onOpenModal={() => setIsNotificationModalOpen(true)}
+                  onOpenModal={handleOpenNotificationModal}
                   onUpdateSettings={handleUpdateNotificationSettings}
                 />
-                <InstallAppButton />
+                <InstallAppButton onModalStateChange={setIsInstallModalOpen} />
               </div>
             </div>
 
@@ -496,7 +941,7 @@ export default function App() {
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => setZenModalType('plan')}
+                onClick={() => handleOpenZenModal('plan')}
                 aria-label="Plan day"
                 className="min-h-[44px] px-2 py-2.5 rounded-[16px] bg-[#F2A33A] text-[#17212B] font-heading font-bold text-xs flex flex-col items-center justify-center gap-0.5 hover:bg-[#e09228] active:scale-95 active:bg-[#d6851f] transition-all cursor-pointer shadow-xs"
               >
@@ -506,7 +951,7 @@ export default function App() {
 
               <button
                 type="button"
-                onClick={() => setZenModalType('break')}
+                onClick={() => handleOpenZenModal('break')}
                 aria-label="Break goal into subtasks"
                 className="min-h-[44px] px-2 py-2.5 rounded-[16px] bg-white border border-[#DDE5EA] text-[#17212B] font-heading font-semibold text-xs flex flex-col items-center justify-center gap-0.5 hover:bg-[#EEF3F6] active:scale-95 active:bg-[#DDE5EA] transition-all cursor-pointer shadow-xs"
               >
@@ -516,7 +961,7 @@ export default function App() {
 
               <button
                 type="button"
-                onClick={() => setZenModalType('review')}
+                onClick={() => handleOpenZenModal('review')}
                 aria-label="Review weekly progress"
                 className="min-h-[44px] px-2 py-2.5 rounded-[16px] bg-white border border-[#DDE5EA] text-[#17212B] font-heading font-semibold text-xs flex flex-col items-center justify-center gap-0.5 hover:bg-[#EEF3F6] active:scale-95 active:bg-[#DDE5EA] transition-all cursor-pointer shadow-xs"
               >
@@ -557,6 +1002,7 @@ export default function App() {
                     onToggleStep={handleToggleStep}
                     onEdit={handleOpenEditModal}
                     onDelete={handleDeleteTask}
+                    onMoveToNextDay={handleMoveToNextDay}
                   />
                 ))}
               </div>
@@ -573,24 +1019,9 @@ export default function App() {
             onToggleComplete={handleToggleComplete}
             onEditTask={handleOpenEditModal}
             onDeleteTask={handleDeleteTask}
-            onAddTaskAtTime={(d, t) => {
-              setModalDefaultDate(d);
-              setEditingTask({
-                id: '',
-                title: '',
-                date: d,
-                startTime: t,
-                durationMinutes: 45,
-                category: 'work',
-                priority: 'medium',
-                completed: false,
-                recurrence: 'none',
-                steps: [],
-                createdAt: Date.now(),
-              });
-              setIsTaskModalOpen(true);
-            }}
-            onRebalanceDay={() => setZenModalType('plan')}
+            onMoveToNextDay={handleMoveToNextDay}
+            onAddTaskAtTime={(d, t) => handleOpenAddModal(d, t)}
+            onRebalanceDay={() => handleOpenZenModal('plan')}
           />
         )}
 
@@ -615,7 +1046,7 @@ export default function App() {
       {/* Floating Bottom Task Bar (BottomNav) */}
       <BottomNav
         currentTab={currentTab}
-        onSelectTab={setCurrentTab}
+        onSelectTab={handleSelectTab}
         onAddTask={handleBottomAddClick}
         visible={!isAnyModalOpen}
       />
@@ -623,35 +1054,47 @@ export default function App() {
       {/* Add / Edit Task Modal */}
       <TaskModal
         isOpen={isTaskModalOpen}
-        onClose={() => setIsTaskModalOpen(false)}
+        onClose={handleCloseTaskModal}
         onSave={handleSaveTask}
         initialTask={editingTask?.id ? editingTask : null}
         defaultDate={modalDefaultDate}
+        onDeleteTask={handleDeleteTask}
+        onMoveToNextDay={handleMoveToNextDay}
       />
 
       {/* Add / Edit Note Modal */}
       <NoteModal
         isOpen={isNoteModalOpen}
-        onClose={() => setIsNoteModalOpen(false)}
+        onClose={handleCloseNoteModal}
         onSave={handleSaveNote}
         initialNote={editingNote}
         defaultDate={noteModalDate}
       />
 
-      {/* Dual Action Choice Modal when tapping Add in Notes section */}
+      {/* Dual Action Choice Modal when tapping Add */}
       <AddActionChoiceModal
         isOpen={isChoiceModalOpen}
-        onClose={() => setIsChoiceModalOpen(false)}
-        onSelectTask={() => handleOpenAddModal(selectedDate)}
-        onSelectNote={() => handleOpenAddNote(selectedDate)}
+        onClose={handleCloseChoiceModal}
+        onSelectTask={handleChoiceSelectTask}
+        onSelectVoiceTask={handleChoiceSelectVoice}
+        onSelectNote={handleChoiceSelectNote}
         dateLabel={formatDateLabel(selectedDate)}
+      />
+
+      {/* Voice Task Modal */}
+      <VoiceTaskModal
+        isOpen={isVoiceModalOpen}
+        onClose={handleCloseVoiceModal}
+        onSaveTask={handleVoiceSaveTask}
+        onEditInModal={handleVoiceEditInModal}
+        defaultDate={currentTab === 'upcoming' || currentTab === 'notes' ? selectedDate : todayStr}
       />
 
       {/* Zen Action Sheets (Plan Day, Break Goal, Review) */}
       <ZenActionModal
         type={zenModalType}
         tasks={currentTab === 'upcoming' ? tasks.filter((t) => t.date === selectedDate) : todayTasks}
-        onClose={() => setZenModalType(null)}
+        onClose={handleCloseZenModal}
         onApplyPlan={handleApplyRebalance}
         onApplySubtasks={handleApplySubtasks}
       />
@@ -659,10 +1102,60 @@ export default function App() {
       {/* Push Notification & Reminder Settings Modal */}
       <NotificationModal
         isOpen={isNotificationModalOpen}
-        onClose={() => setIsNotificationModalOpen(false)}
+        onClose={handleCloseNotificationModal}
         settings={notificationSettings}
         onSaveSettings={handleUpdateNotificationSettings}
+        onTriggerTestBanner={(payload) => setActiveBannerNotification(payload)}
       />
+
+      {/* Animated Mobile Task Reminder Banner */}
+      <AnimatedNotificationBanner
+        notification={activeBannerNotification}
+        onComplete={(taskId) => {
+          handleToggleComplete(taskId, true);
+          setActiveBannerNotification(null);
+        }}
+        onDismiss={() => setActiveBannerNotification(null)}
+      />
+
+      {/* Floating Quick Voice Action Button */}
+      {!isAnyModalOpen && (
+        <button
+          type="button"
+          onClick={() => handleOpenVoiceModal()}
+          aria-label="Add task with voice"
+          title="Speak task to add"
+          className="fixed right-4 sm:right-[max(1.5rem,calc(50%-220px))] bottom-[max(86px,calc(env(safe-area-inset-bottom)+78px))] z-40 w-13 h-13 min-w-[52px] min-h-[52px] rounded-full bg-[#17212B] hover:bg-black text-[#F2A33A] flex items-center justify-center shadow-[0_8px_24px_rgba(23,33,43,0.3)] border border-white/20 active:scale-90 transition-all cursor-pointer group"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:scale-110 transition-transform">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="22" />
+          </svg>
+        </button>
+      )}
+
+      {/* Unified In-App Notification Toast (Task deleted with undo, workout added, etc.) */}
+      <AppToast
+        toast={appToast}
+        onDismiss={() => setAppToast(null)}
+      />
+
+      {/* Mobile Double-Back Exit Confirmation Toast */}
+      {showExitToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-full bg-[#17212B]/95 text-white text-[13px] font-medium backdrop-blur-md shadow-2xl border border-white/20 flex items-center gap-2 pointer-events-none select-none animate-fadeIn"
+        >
+          <div className="w-5 h-5 rounded-full bg-[#F2A33A]/20 flex items-center justify-center text-[#F2A33A]">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+          </div>
+          <span>Press back again to exit</span>
+        </div>
+      )}
 
       {/* Modern Circular Animated Intro Splash Screen */}
       {showIntro && <ZenAppIntro onDismiss={() => setShowIntro(false)} />}

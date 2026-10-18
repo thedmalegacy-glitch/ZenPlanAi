@@ -10,6 +10,7 @@ interface UpcomingTimelineProps {
   onToggleComplete: (id: string) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (id: string) => void;
+  onMoveToNextDay: (id: string) => void;
   onAddTaskAtTime: (date: string, startTime: string) => void;
   onRebalanceDay: (date: string) => void;
 }
@@ -21,6 +22,7 @@ export const UpcomingTimeline: React.FC<UpcomingTimelineProps> = ({
   onToggleComplete,
   onEditTask,
   onDeleteTask,
+  onMoveToNextDay,
   onAddTaskAtTime,
   onRebalanceDay,
 }) => {
@@ -291,42 +293,80 @@ export const UpcomingTimeline: React.FC<UpcomingTimelineProps> = ({
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => onToggleComplete(t.id)}
-                      aria-label={t.completed ? 'Mark incomplete' : 'Mark complete'}
-                      className={`w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer active:scale-90 transition-all ${
-                        isTargetNext ? 'text-white hover:bg-white/10 active:bg-white/20' : 'text-[#17212B] hover:bg-[#EEF3F6] active:bg-[#DDE5EA]'
+                  {/* Checkbox */}
+                  <button
+                    type="button"
+                    onClick={() => onToggleComplete(t.id)}
+                    aria-label={t.completed ? 'Mark incomplete' : 'Mark complete'}
+                    className={`w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-full cursor-pointer active:scale-90 transition-all self-start -mt-0.5 ${
+                      isTargetNext ? 'text-white hover:bg-white/10' : 'text-[#17212B] hover:bg-[#EEF3F6]'
+                    }`}
+                  >
+                    <div
+                      className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                        t.completed
+                          ? 'bg-[#F2A33A] border-[#F2A33A] text-[#17212B]'
+                          : isTargetNext
+                          ? 'border-white/50'
+                          : 'border-[#9AA9B5]'
                       }`}
                     >
-                      <div
-                        className={`w-5 h-5 rounded border flex items-center justify-center ${
-                          t.completed
-                            ? 'bg-[#F2A33A] border-[#F2A33A] text-[#17212B]'
-                            : isTargetNext
-                            ? 'border-white/50'
-                            : 'border-[#9AA9B5]'
-                        }`}
-                      >
-                        {t.completed && (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                        )}
-                      </div>
-                    </button>
+                      {t.completed && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Actions Column: Top Edit, Middle Delete, Bottom Move to Next Day */}
+                  <div className="flex flex-col items-center justify-start gap-1 flex-shrink-0 self-start -mr-1 -mt-1">
+                    {/* 1. Edit Button (On Top) */}
                     <button
                       type="button"
                       onClick={() => onEditTask(t)}
                       aria-label={`Edit ${t.title}`}
-                      className={`w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full cursor-pointer active:scale-90 transition-all ${
-                        isTargetNext ? 'text-white hover:bg-white/10 active:bg-white/20' : 'text-[#55636F] hover:bg-[#EEF3F6] active:bg-[#DDE5EA]'
+                      title="Edit task"
+                      className={`w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl cursor-pointer active:scale-90 transition-all ${
+                        isTargetNext ? 'text-white/80 hover:text-white hover:bg-white/10' : 'text-[#55636F] hover:text-[#17212B] hover:bg-[#EEF3F6]'
                       }`}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        <path d="m15 5 4 4" />
+                      </svg>
+                    </button>
+
+                    {/* 2. Delete Button (Below That) */}
+                    <button
+                      type="button"
+                      onClick={() => onDeleteTask(t.id)}
+                      aria-label={`Delete ${t.title}`}
+                      title="Delete task"
+                      className={`w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl cursor-pointer active:scale-90 transition-all ${
+                        isTargetNext ? 'text-white/80 hover:text-rose-300 hover:bg-white/10' : 'text-[#55636F] hover:text-[#E4572E] hover:bg-[#FBE3DC]'
+                      }`}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18" />
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                      </svg>
+                    </button>
+
+                    {/* 3. Move to Next Day Button (Below That) */}
+                    <button
+                      type="button"
+                      onClick={() => onMoveToNextDay(t.id)}
+                      aria-label={`Move ${t.title} to next day`}
+                      title="Move to next day (+1 day)"
+                      className={`w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl cursor-pointer active:scale-90 transition-all group ${
+                        isTargetNext ? 'text-white/80 hover:text-[#F2A33A] hover:bg-white/10' : 'text-[#55636F] hover:text-[#2F3E8F] hover:bg-[#E3E8F6]'
+                      }`}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-0.5 transition-transform">
+                        <polyline points="9 18 15 12 9 6" />
+                        <line x1="5" y1="12" x2="15" y2="12" />
                       </svg>
                     </button>
                   </div>

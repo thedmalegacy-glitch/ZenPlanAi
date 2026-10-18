@@ -4,6 +4,7 @@ interface AddActionChoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectTask: () => void;
+  onSelectVoiceTask?: () => void;
   onSelectNote: () => void;
   dateLabel?: string;
 }
@@ -12,6 +13,7 @@ export const AddActionChoiceModal: React.FC<AddActionChoiceModalProps> = ({
   isOpen,
   onClose,
   onSelectTask,
+  onSelectVoiceTask,
   onSelectNote,
   dateLabel,
 }) => {
@@ -50,13 +52,39 @@ export const AddActionChoiceModal: React.FC<AddActionChoiceModalProps> = ({
         </div>
 
         <div className="grid grid-cols-1 gap-2.5 pt-1">
-          {/* Option 1: Add Note (On Top) */}
+          {/* Option 0: Add with Voice */}
+          {onSelectVoiceTask && (
+            <button
+              type="button"
+              onClick={onSelectVoiceTask}
+              className="min-h-[56px] w-full p-4 rounded-[18px] border-2 border-[#17212B] bg-[#17212B] text-white hover:bg-black active:scale-98 transition-all flex items-center justify-between group cursor-pointer text-left shadow-xs"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 text-[#F2A33A] flex items-center justify-center shadow-xs">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-heading font-bold text-[15px] text-white">Add with Voice</p>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#F2A33A] text-[#17212B] font-bold">New</span>
+                  </div>
+                  <p className="font-body text-xs text-white/80">Speak your task & time naturally</p>
+                </div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-white/70 group-hover:translate-x-0.5 transition-transform">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          )}
+
+          {/* Option 1: Add Note */}
           <button
             type="button"
-            onClick={() => {
-              onClose();
-              onSelectNote();
-            }}
+            onClick={onSelectNote}
             className="min-h-[56px] w-full p-4 rounded-[18px] border border-[#DDE5EA] hover:border-[#F2A33A] bg-[#FAFCFD] hover:bg-white active:scale-98 transition-all flex items-center justify-between group cursor-pointer text-left"
           >
             <div className="flex items-center gap-3">
@@ -78,23 +106,20 @@ export const AddActionChoiceModal: React.FC<AddActionChoiceModalProps> = ({
             </svg>
           </button>
 
-          {/* Option 2: Add Task */}
+          {/* Option 2: Add Task Form */}
           <button
             type="button"
-            onClick={() => {
-              onClose();
-              onSelectTask();
-            }}
+            onClick={onSelectTask}
             className="min-h-[56px] w-full p-4 rounded-[18px] border border-[#DDE5EA] hover:border-[#17212B] bg-[#FAFCFD] hover:bg-white active:scale-98 transition-all flex items-center justify-between group cursor-pointer text-left"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#17212B] text-white flex items-center justify-center shadow-xs">
+              <div className="w-10 h-10 rounded-full bg-[#EEF3F6] text-[#17212B] flex items-center justify-center shadow-xs">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
               <div>
-                <p className="font-heading font-semibold text-[15px] text-[#17212B]">Add Task</p>
+                <p className="font-heading font-semibold text-[15px] text-[#17212B]">Add Task (Form)</p>
                 <p className="font-body text-xs text-[#55636F]">Schedule a task, meeting, or timeblock</p>
               </div>
             </div>
