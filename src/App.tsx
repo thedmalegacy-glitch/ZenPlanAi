@@ -12,6 +12,7 @@ import { NoteModal } from './components/NoteModal';
 import { AddActionChoiceModal } from './components/AddActionChoiceModal';
 import { ZenAppIntro } from './components/ZenAppIntro';
 import { ZenActionModal } from './components/ZenActionModal';
+import { ZenPlanLogo } from './components/ZenPlanLogo';
 import { InstallAppButton } from './components/InstallAppButton';
 import { NotificationSettingsButton } from './components/NotificationSettingsButton';
 import { NotificationModal } from './components/NotificationModal';
@@ -838,16 +839,22 @@ export default function App() {
           <div className="space-y-4">
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <h1 className="font-heading text-[28px] font-bold text-[#17212B] leading-tight">
-                  Today
-                </h1>
-                <p className="font-body text-[13px] text-[#55636F] mt-0.5">
-                  {formatDateLabel(todayStr)} •{' '}
-                  <span className="font-semibold text-[#17212B]">
-                    {todayCompleted} of {todayTasks.length} done
-                  </span>
-                </p>
+              <div className="flex items-center gap-3">
+                <ZenPlanLogo size={42} animate={true} />
+                <div>
+                  <h1 className="font-heading text-[26px] font-bold text-[#17212B] leading-tight flex items-center gap-2">
+                    <span>Today</span>
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#E3E8F6] text-[#2F3E8F]">
+                      ZenPlan
+                    </span>
+                  </h1>
+                  <p className="font-body text-[12.5px] text-[#55636F] mt-0.5">
+                    {formatDateLabel(todayStr)} •{' '}
+                    <span className="font-semibold text-[#17212B]">
+                      {todayCompleted} of {todayTasks.length} done
+                    </span>
+                  </p>
+                </div>
               </div>
 
               {/* Action buttons: Voice, Reminders & Install App */}
@@ -1146,14 +1153,16 @@ export default function App() {
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-full bg-[#17212B]/95 text-white text-[13px] font-medium backdrop-blur-md shadow-2xl border border-white/20 flex items-center gap-2 pointer-events-none select-none animate-fadeIn"
+          className="fixed inset-x-0 bottom-24 z-[60] flex justify-center px-4 pointer-events-none select-none"
         >
-          <div className="w-5 h-5 rounded-full bg-[#F2A33A]/20 flex items-center justify-center text-[#F2A33A]">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
+          <div className="px-4 py-2.5 rounded-full bg-[#17212B]/95 text-white text-[13px] font-medium backdrop-blur-md shadow-2xl border border-white/20 flex items-center gap-2 animate-fadeIn">
+            <div className="w-5 h-5 rounded-full bg-[#F2A33A]/20 flex items-center justify-center text-[#F2A33A]">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </div>
+            <span>Press back again to exit</span>
           </div>
-          <span>Press back again to exit</span>
         </div>
       )}
 

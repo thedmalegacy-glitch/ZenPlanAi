@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { ZenPlanLogo } from './ZenPlanLogo';
 
 interface InstallAppButtonProps {
   onModalStateChange?: (isOpen: boolean) => void;
@@ -96,19 +97,14 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({ onModalState
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-2 border-b border-[#EEF3F6]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-full bg-[#F2A33A]/15 flex items-center justify-center text-[#F2A33A] flex-shrink-0">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
-                    <line x1="12" y1="18" x2="12.01" y2="18" />
-                  </svg>
-                </div>
+              <div className="flex items-center gap-3">
+                <ZenPlanLogo size={38} />
                 <div>
                   <h3 id="ios-install-title" className="font-heading text-[17px] font-bold text-[#17212B] leading-tight">
-                    Install on iPhone / iPad
+                    Install ZenPlan on iOS
                   </h3>
                   <p className="font-body text-[11px] text-[#55636F]">
-                    Fast 1-tap home screen access
+                    Daylight Orbit Planner • 1-tap home access
                   </p>
                 </div>
               </div>
@@ -175,20 +171,14 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({ onModalState
           >
             {/* Header */}
             <div className="flex items-center justify-between pb-2 border-b border-[#EEF3F6]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-full bg-[#F2A33A]/15 flex items-center justify-center text-[#F2A33A] flex-shrink-0">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                </div>
+              <div className="flex items-center gap-3">
+                <ZenPlanLogo size={38} />
                 <div>
                   <h3 id="generic-install-title" className="font-heading text-[17px] font-bold text-[#17212B] leading-tight">
                     Install ZenPlan App
                   </h3>
                   <p className="font-body text-[11px] text-[#55636F]">
-                    Save to home screen & use offline
+                    Daylight Orbit Planner • Save to home screen
                   </p>
                 </div>
               </div>

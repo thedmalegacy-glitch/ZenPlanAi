@@ -39,11 +39,11 @@ export const AppToast: React.FC<AppToastProps> = ({ toast, onDismiss }) => {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-[max(84px,calc(env(safe-area-inset-bottom)+76px))] left-1/2 -translate-x-1/2 z-[80] w-[92%] max-w-md animate-slideDownNotification select-none"
+      className="fixed inset-x-0 bottom-[max(84px,calc(env(safe-area-inset-bottom)+76px))] z-[110] flex justify-center px-4 pointer-events-none select-none"
     >
-      <div className="relative overflow-hidden rounded-[20px] bg-[#17212B]/95 text-white backdrop-blur-md shadow-2xl border border-white/15 p-3.5 flex items-center justify-between gap-3">
+      <div className="pointer-events-auto w-full max-w-md relative overflow-hidden rounded-[20px] bg-[#17212B]/95 text-white backdrop-blur-md shadow-2xl border border-white/15 p-3.5 flex items-center justify-between gap-3 animate-toastSlideUp">
         {/* Left Icon + Text */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           {/* Icon Badge */}
           <div
             className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -86,12 +86,12 @@ export const AppToast: React.FC<AppToastProps> = ({ toast, onDismiss }) => {
           </div>
 
           {/* Text details */}
-          <div className="min-w-0 pr-1">
-            <p className="font-heading font-semibold text-xs text-white leading-snug line-clamp-1">
+          <div className="min-w-0 flex-1 pr-1">
+            <p className="font-heading font-semibold text-xs text-white leading-snug line-clamp-2">
               {toast.message}
             </p>
             {toast.subtext && (
-              <p className="font-body text-[11px] text-white/70 line-clamp-1">
+              <p className="font-body text-[11px] text-white/70 line-clamp-1 mt-0.5">
                 {toast.subtext}
               </p>
             )}

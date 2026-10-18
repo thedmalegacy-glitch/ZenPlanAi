@@ -42,6 +42,12 @@ export interface WorkoutExercise {
   difficulty?: 'beginner' | 'intermediate' | 'advanced';
   instructions: string[];
   tips: string;
+  muscleGroup?: 'chest' | 'back' | 'legs' | 'gluteus' | 'deltoids' | 'arms' | 'abs' | 'cardio';
+  reps?: number;
+  sets?: number;
+  weightKg?: number;
+  restSec?: number;
+  completedSets?: number;
 }
 
 export type NoteCategory = 'reflection' | 'idea' | 'meeting' | 'journal' | 'general';

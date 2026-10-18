@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Note } from '../types';
 import { addDays, formatDateLabel } from '../utils/time';
+import { ZenPlanLogo } from './ZenPlanLogo';
 
 interface NotesViewProps {
   notes: Note[];
@@ -52,13 +53,16 @@ export const NotesView: React.FC<NotesViewProps> = ({
     <div className="space-y-4 pb-28">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="font-heading text-[28px] font-bold text-[#17212B] leading-tight">
-            {formatDateLabel(selectedDate)}
-          </h1>
-          <p className="font-body text-[13px] text-[#55636F] mt-0.5">
-            {totalNotesForDate} {totalNotesForDate === 1 ? 'note' : 'notes'} for this day • Date-wise daily logs
-          </p>
+        <div className="flex items-center gap-3">
+          <ZenPlanLogo size={38} />
+          <div>
+            <h1 className="font-heading text-[26px] sm:text-[28px] font-bold text-[#17212B] leading-tight">
+              {formatDateLabel(selectedDate)}
+            </h1>
+            <p className="font-body text-[13px] text-[#55636F] mt-0.5">
+              {totalNotesForDate} {totalNotesForDate === 1 ? 'note' : 'notes'} for this day • Daily Logs
+            </p>
+          </div>
         </div>
 
         <button

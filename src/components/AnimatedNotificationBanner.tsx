@@ -46,9 +46,9 @@ export const AnimatedNotificationBanner: React.FC<AnimatedNotificationBannerProp
     <div
       role="alert"
       aria-live="assertive"
-      className="fixed top-[max(12px,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[100] w-[94%] max-w-md animate-slideDownNotification select-none"
+      className="fixed inset-x-0 top-[max(12px,env(safe-area-inset-top))] z-[110] flex justify-center px-3.5 pointer-events-none select-none"
     >
-      <div className="relative overflow-hidden rounded-[24px] bg-white border border-[#DDE5EA] shadow-[0_16px_40px_rgba(23,33,43,0.18)] p-4 transition-all">
+      <div className="pointer-events-auto w-full max-w-md relative overflow-hidden rounded-[24px] bg-white border border-[#DDE5EA] shadow-[0_16px_40px_rgba(23,33,43,0.18)] p-4 transition-all animate-bannerSlideDown">
         {/* Subtle glowing ambient pulse */}
         <div
           className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-2xl opacity-25 pointer-events-none ${
