@@ -806,11 +806,10 @@ export default function App() {
     setNotes((prev) => prev.filter((n) => n.id !== id));
   };
 
-  // Center "Add" button click handler
-  // Center "Add" button click handler
+  // Center "Add" button click handler - opens the form to add a new task directly on one click
   const handleBottomAddClick = () => {
-    // Open choice modal offering: Add with Voice, Add Note, or Add Task
-    handleOpenChoiceModal();
+    const targetDate = currentTab === 'upcoming' || currentTab === 'notes' ? selectedDate : getTodayDateString();
+    handleOpenAddModal(targetDate);
   };
 
   // Today calculations (sorted chronologically: pending first by time e.g. 9am, 10am, 1pm; completed at bottom)
