@@ -110,6 +110,39 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
+// Web Push Event: Triggered by OS push service even when app / browser is completely closed!
+self.addEventListener('push', (event) => {
+  let data = {};
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch {
+      data = {
+        title: 'Task Reminder • ZenPlan',
+        body: event.data.text() || 'You have an upcoming task scheduled.',
+      };
+    }
+  }
+
+  const title = data.title || 'Task Reminder • ZenPlan';
+  const options = {
+    body: data.body || 'You have an upcoming task scheduled.',
+    icon: '/pwa-192x192.png',
+    badge: '/pwa-192x192.png',
+    vibrate: [200, 100, 200, 100, 200],
+    tag: data.tag || `zenplan-reminder-${Date.now()}`,
+    renotify: true,
+    requireInteraction: true,
+    data: data.data || {},
+    actions: data.actions || [
+      { action: 'complete', title: '✓ Mark Complete' },
+      { action: 'open', title: 'Open App' },
+    ],
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
 // Direct message listener to trigger notifications through the Service Worker context
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'TRIGGER_TASK_NOTIFICATION') {

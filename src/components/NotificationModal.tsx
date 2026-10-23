@@ -5,6 +5,8 @@ import {
   getNotificationPermission,
   requestNotificationPermission,
   sendTestNotification,
+  sendDelayedClosedAppTest,
+  getOrRegisterPushSubscription,
 } from '../utils/notifications';
 import { TaskNotificationPayload } from '../types';
 
@@ -27,6 +29,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   const [leadMinutes, setLeadMinutes] = useState(settings.leadMinutes);
   const [permission, setPermission] = useState<NotificationPermission>(getNotificationPermission());
   const [testSent, setTestSent] = useState(false);
+  const [closedAppTestState, setClosedAppTestState] = useState<'idle' | 'counting' | 'sent'>('idle');
+  const [countdown, setCountdown] = useState(5);
 
   if (!isOpen) return null;
 
@@ -66,6 +70,31 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     if (ok) {
       setTestSent(true);
       setTimeout(() => setTestSent(false), 4000);
+    }
+  };
+
+  const handleTestClosedApp = async () => {
+    if (permission !== 'granted') {
+      const res = await requestNotificationPermission();
+      setPermission(res);
+      if (res !== 'granted') return;
+    }
+    await getOrRegisterPushSubscription();
+    const ok = await sendDelayedClosedAppTest(5);
+    if (ok) {
+      setClosedAppTestState('counting');
+      setCountdown(5);
+      const timer = setInterval(() => {
+        setCountdown((c) => {
+          if (c <= 1) {
+            clearInterval(timer);
+            setClosedAppTestState('sent');
+            setTimeout(() => setClosedAppTestState('idle'), 4000);
+            return 0;
+          }
+          return c - 1;
+        });
+      }, 1000);
     }
   };
 
@@ -183,16 +212,82 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               </div>
             </div>
 
-            {/* On-device Storage Note */}
-            <div className="p-3.5 rounded-[16px] bg-[#DDF0EE] text-[#1F6F6F] text-xs space-y-1">
-              <div className="font-bold flex items-center gap-1.5">
+            {/* Closed App & Background Push Notifications Card */}
+            <div className="p-4 rounded-[18px] bg-linear-to-br from-[#17212B] to-[#2F3E8F] text-white space-y-2.5 shadow-md">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-white">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h24s-3-2-3-9" />
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                  </div>
+                  <span className="font-heading font-bold text-xs tracking-wide">
+                    Closed App &amp; Locked Screen Alerts
+                  </span>
+                </div>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#10B981]/25 text-[#6EE7B7] border border-[#10B981]/30">
+                  Active
+                </span>
+              </div>
+
+              <p className="font-body text-[11.5px] text-white/85 leading-relaxed">
+                Reminders are delivered directly to your device screen &amp; sound alerts via Web Push even when this app is completely closed or screen is locked.
+              </p>
+
+              {/* Interactive Closed-App Test Button */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={handleTestClosedApp}
+                  disabled={closedAppTestState === 'counting'}
+                  className={`w-full min-h-[40px] py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    closedAppTestState === 'counting'
+                      ? 'bg-[#F2A33A] text-[#17212B] font-bold animate-pulse'
+                      : closedAppTestState === 'sent'
+                      ? 'bg-[#10B981] text-white font-bold'
+                      : 'bg-white/15 hover:bg-white/25 active:scale-95 text-white border border-white/20'
+                  }`}
+                >
+                  {closedAppTestState === 'counting' ? (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-[#17212B] animate-ping" />
+                      <span>Firing in {countdown}s! Lock screen or close app now</span>
+                    </>
+                  ) : closedAppTestState === 'sent' ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span>Alert Dispatched to Device!</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      <span>Test Closed-App Alert (5s delay)</span>
+                    </>
+                  )}
+                </button>
+                <p className="text-[10px] text-white/70 text-center mt-1.5">
+                  Tap above, then immediately close this app or lock your phone to see it ring!
+                </p>
+              </div>
+            </div>
+
+            {/* Mobile PWA & Home Screen Tip */}
+            <div className="p-3.5 rounded-[16px] bg-[#EEF3F6] border border-[#DDE5EA] text-[#55636F] text-xs space-y-1">
+              <div className="font-bold text-[#17212B] flex items-center gap-1.5">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+                  <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
+                  <path d="M12 18h.01" />
                 </svg>
-                100% Stored Locally on Your Device
+                Mobile Best Practice
               </div>
               <p className="leading-relaxed text-[11px]">
-                All your schedule, habits, and tasks remain entirely inside this device’s local browser storage. No third-party servers see your schedule.
+                On Android &amp; iOS, install ZenPlan to your <strong>Home Screen</strong> via the install button or Safari Share menu. Installed web apps receive system push wakeups with the highest reliability.
               </p>
             </div>
 

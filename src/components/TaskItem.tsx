@@ -10,6 +10,7 @@ interface TaskItemProps {
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   onMoveToNextDay: (id: string) => void;
+  onViewDetails?: (task: Task) => void;
 }
 
 export const TaskItem: React.FC<TaskItemProps> = ({
@@ -19,6 +20,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   onEdit,
   onDelete,
   onMoveToNextDay,
+  onViewDetails,
 }) => {
   const [showSteps, setShowSteps] = useState(false);
 
@@ -62,11 +64,23 @@ export const TaskItem: React.FC<TaskItemProps> = ({
           </div>
         </button>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0" onClick={() => onEdit(task)}>
+        {/* Content (Clicking opens task details pop-up to read full description and details) */}
+        <div
+          className="flex-1 min-w-0 cursor-pointer group"
+          onClick={() => (onViewDetails ? onViewDetails(task) : onEdit(task))}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              (onViewDetails ? onViewDetails(task) : onEdit(task));
+            }
+          }}
+          aria-label={`View details for ${task.title}`}
+        >
           <div className="flex items-center gap-2 flex-wrap">
             <h4
-              className={`font-body font-semibold text-[15px] leading-snug cursor-pointer ${
+              className={`font-body font-semibold text-[15px] leading-snug group-hover:text-[#2F3E8F] transition-colors ${
                 task.completed ? 'line-through text-[#55636F]' : 'text-[#17212B]'
               }`}
             >

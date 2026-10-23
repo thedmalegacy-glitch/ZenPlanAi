@@ -4,6 +4,7 @@ import { DayArc } from './components/DayArc';
 import { DailyThoughtCard } from './components/DailyThoughtCard';
 import { TaskItem } from './components/TaskItem';
 import { TaskModal } from './components/TaskModal';
+import { TaskDetailModal } from './components/TaskDetailModal';
 import { BottomNav, NavTab } from './components/BottomNav';
 import { UpcomingTimeline } from './components/UpcomingTimeline';
 import { FitnessView } from './components/FitnessView';
@@ -25,6 +26,7 @@ import {
   loadNotificationSettings,
   saveNotificationSettings,
   checkAndTriggerTaskReminders,
+  syncTaskRemindersWithBackend,
   NotificationSettings,
   playNotificationChime,
   triggerDeviceVibration,
@@ -110,6 +112,9 @@ export default function App() {
   const [zenModalType, setZenModalType] = useState<'plan' | 'break' | 'review' | null>(null);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
 
+  // Task Detail Pop-up Modal (Read full description & task metadata)
+  const [viewingTask, setViewingTask] = useState<Task | null>(null);
+
   // Notes Modals
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -136,6 +141,7 @@ export default function App() {
   // Keep ref in sync so popstate listener always reads fresh modal status without listener re-binding
   const openModalsRef = React.useRef({
     isTaskModalOpen: false,
+    isTaskDetailModalOpen: false,
     isNoteModalOpen: false,
     isChoiceModalOpen: false,
     isZenModalOpen: false,
@@ -147,6 +153,7 @@ export default function App() {
   useEffect(() => {
     openModalsRef.current = {
       isTaskModalOpen,
+      isTaskDetailModalOpen: viewingTask !== null,
       isNoteModalOpen,
       isChoiceModalOpen,
       isZenModalOpen: zenModalType !== null,
@@ -154,7 +161,7 @@ export default function App() {
       isVoiceModalOpen,
       isInstallModalOpen,
     };
-  }, [isTaskModalOpen, isNoteModalOpen, isChoiceModalOpen, zenModalType, isNotificationModalOpen, isVoiceModalOpen, isInstallModalOpen]);
+  }, [isTaskModalOpen, viewingTask, isNoteModalOpen, isChoiceModalOpen, zenModalType, isNotificationModalOpen, isVoiceModalOpen, isInstallModalOpen]);
 
   // Mobile Back Button Navigation Engine (popstate handling)
   useEffect(() => {
@@ -169,6 +176,7 @@ export default function App() {
       const modals = openModalsRef.current;
       const anyModalWasOpen =
         modals.isTaskModalOpen ||
+        modals.isTaskDetailModalOpen ||
         modals.isNoteModalOpen ||
         modals.isChoiceModalOpen ||
         modals.isZenModalOpen ||
@@ -178,6 +186,7 @@ export default function App() {
       // Case A: A modal was open. The mobile back button pops that modal!
       if (anyModalWasOpen) {
         setIsTaskModalOpen(false);
+        setViewingTask(null);
         setIsNoteModalOpen(false);
         setIsChoiceModalOpen(false);
         setZenModalType(null);
@@ -295,6 +304,15 @@ export default function App() {
     };
   }, [tasks, notificationSettings]);
 
+  // Sync scheduled tasks and reminder triggers to backend push queue for closed-app notifications
+  useEffect(() => {
+    if (!notificationSettings.enabled) return;
+    const timer = setTimeout(() => {
+      syncTaskRemindersWithBackend(tasks, notificationSettings).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [tasks, notificationSettings]);
+
   // Listen for notification action clicks from Service Worker (e.g. Android notification panel "✓ Mark Complete")
   useEffect(() => {
     if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
@@ -313,20 +331,29 @@ export default function App() {
     }
   }, []);
 
-  // Handle URL query parameter if opened from notification action click while app was closed
+  // Handle URL query parameters if opened from notification action click or tap while app was closed
   useEffect(() => {
     try {
       const urlParams = new URLSearchParams(window.location.search);
       const completeTaskId = urlParams.get('completeTaskId');
+      const viewTaskId = urlParams.get('viewTaskId');
+
       if (completeTaskId) {
         handleToggleComplete(completeTaskId, true);
+        const cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState(window.history.state, '', cleanUrl);
+      } else if (viewTaskId) {
+        const found = tasks.find((t) => t.id === viewTaskId);
+        if (found) {
+          handleOpenTaskDetails(found);
+        }
         const cleanUrl = window.location.pathname + window.location.hash;
         window.history.replaceState(window.history.state, '', cleanUrl);
       }
     } catch {
       // Ignore
     }
-  }, []);
+  }, [tasks]);
 
   const handleUpdateNotificationSettings = (newSettings: NotificationSettings) => {
     setNotificationSettings(newSettings);
@@ -503,6 +530,7 @@ export default function App() {
 
     // Close any modal if open
     setIsTaskModalOpen(false);
+    setViewingTask(null);
     setIsNoteModalOpen(false);
     setIsChoiceModalOpen(false);
     setZenModalType(null);
@@ -565,6 +593,18 @@ export default function App() {
     setIsTaskModalOpen(false);
     setEditingTask(null);
     if (window.history.state?.modal === 'task') {
+      window.history.back();
+    }
+  };
+
+  const handleOpenTaskDetails = (task: Task) => {
+    setViewingTask(task);
+    openModalInHistory('task_detail');
+  };
+
+  const handleCloseTaskDetails = () => {
+    setViewingTask(null);
+    if (window.history.state?.modal === 'task_detail') {
       window.history.back();
     }
   };
@@ -821,8 +861,10 @@ export default function App() {
   const todayUrgent = todayTasks.filter((t) => !t.completed && t.priority === 'high').length;
 
   const currentThought = MOTIVATIONAL_THOUGHTS[thoughtIndex];
+  const activeViewingTask = viewingTask ? tasks.find((t) => t.id === viewingTask.id) || viewingTask : null;
   const isAnyModalOpen =
     isTaskModalOpen ||
+    viewingTask !== null ||
     zenModalType !== null ||
     isNotificationModalOpen ||
     isNoteModalOpen ||
@@ -1009,6 +1051,7 @@ export default function App() {
                     onEdit={handleOpenEditModal}
                     onDelete={handleDeleteTask}
                     onMoveToNextDay={handleMoveToNextDay}
+                    onViewDetails={handleOpenTaskDetails}
                   />
                 ))}
               </div>
@@ -1028,6 +1071,7 @@ export default function App() {
             onMoveToNextDay={handleMoveToNextDay}
             onAddTaskAtTime={(d, t) => handleOpenAddModal(d, t)}
             onRebalanceDay={() => handleOpenZenModal('plan')}
+            onViewTaskDetails={handleOpenTaskDetails}
           />
         )}
 
@@ -1065,6 +1109,24 @@ export default function App() {
         initialTask={editingTask?.id ? editingTask : null}
         defaultDate={modalDefaultDate}
         onDeleteTask={handleDeleteTask}
+        onMoveToNextDay={handleMoveToNextDay}
+      />
+
+      {/* Read Task Details Pop-up Modal */}
+      <TaskDetailModal
+        task={activeViewingTask}
+        isOpen={viewingTask !== null}
+        onClose={handleCloseTaskDetails}
+        onEdit={(taskToEdit) => {
+          handleCloseTaskDetails();
+          handleOpenEditModal(taskToEdit);
+        }}
+        onToggleComplete={handleToggleComplete}
+        onToggleStep={handleToggleStep}
+        onDelete={(taskId) => {
+          handleCloseTaskDetails();
+          handleDeleteTask(taskId);
+        }}
         onMoveToNextDay={handleMoveToNextDay}
       />
 

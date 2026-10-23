@@ -397,3 +397,166 @@ export function checkAndTriggerTaskReminders(
     }
   });
 }
+
+// Helper to convert VAPID base64 string to Uint8Array
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+// Acquire or create Web Push subscription for closed-app background notifications
+export async function getOrRegisterPushSubscription(): Promise<PushSubscription | null> {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return null;
+  }
+  if (getNotificationPermission() !== 'granted') {
+    return null;
+  }
+
+  try {
+    const reg = await getActiveServiceWorkerRegistration();
+    if (!reg) return null;
+
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const res = await fetch('/api/push/vapid-public-key');
+      if (!res.ok) return null;
+      const { publicKey } = await res.json();
+      if (!publicKey) return null;
+
+      const convertedKey = urlBase64ToUint8Array(publicKey);
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: convertedKey as unknown as BufferSource,
+      });
+    }
+
+    if (sub) {
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub }),
+      }).catch(() => {});
+    }
+
+    return sub;
+  } catch (err) {
+    console.warn('Could not register push subscription:', err);
+    return null;
+  }
+}
+
+// Sync upcoming task reminders to the server so they fire even when the app is completely closed
+export async function syncTaskRemindersWithBackend(
+  tasks: Task[],
+  settings: NotificationSettings
+): Promise<boolean> {
+  if (!settings.enabled || getNotificationPermission() !== 'granted') {
+    return false;
+  }
+
+  try {
+    const sub = await getOrRegisterPushSubscription();
+    if (!sub) return false;
+
+    const nowMs = Date.now();
+    const reminders: Array<{
+      id: string;
+      taskId: string;
+      title: string;
+      description: string;
+      category: string;
+      timeLabel: string;
+      triggerTimeMs: number;
+      leadMinutes: number;
+      date: string;
+    }> = [];
+
+    tasks.forEach((task) => {
+      if (task.completed || !task.startTime || !task.date) return;
+      const [year, month, day] = task.date.split('-').map(Number);
+      const [hours, minutes] = task.startTime.split(':').map(Number);
+      if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hours) || isNaN(minutes)) return;
+
+      const taskDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+      const taskStartTimeMs = taskDate.getTime();
+      const lead = task.reminderLeadMinutes !== undefined ? task.reminderLeadMinutes : settings.leadMinutes;
+      const timeLabel = formatTimeDisplay(task.startTime);
+
+      // 1. Lead notification (e.g. 10m before)
+      if (lead > 0) {
+        const leadTriggerMs = taskStartTimeMs - lead * 60 * 1000;
+        if (leadTriggerMs > nowMs - 60 * 1000) {
+          reminders.push({
+            id: `lead_${task.id}_${task.date}_${task.startTime}_${lead}`,
+            taskId: task.id,
+            title: task.title,
+            description: task.description || '',
+            category: task.category,
+            timeLabel,
+            triggerTimeMs: leadTriggerMs,
+            leadMinutes: lead,
+            date: task.date,
+          });
+        }
+      }
+
+      // 2. Exact start notification (at start time)
+      if (taskStartTimeMs > nowMs - 60 * 1000) {
+        reminders.push({
+          id: `exact_${task.id}_${task.date}_${task.startTime}`,
+          taskId: task.id,
+          title: task.title,
+          description: task.description || '',
+          category: task.category,
+          timeLabel,
+          triggerTimeMs: taskStartTimeMs,
+          leadMinutes: 0,
+          date: task.date,
+        });
+      }
+    });
+
+    const res = await fetch('/api/push/sync-reminders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subscription: sub,
+        reminders,
+      }),
+    });
+
+    return res.ok;
+  } catch (err) {
+    console.warn('Error syncing task reminders with backend:', err);
+    return false;
+  }
+}
+
+// Send a test reminder that fires after a delay (e.g. 5 seconds) to allow the user to lock their screen or close the app and verify!
+export async function sendDelayedClosedAppTest(delaySeconds: number = 5): Promise<boolean> {
+  if (getNotificationPermission() !== 'granted') return false;
+  try {
+    const sub = await getOrRegisterPushSubscription();
+    if (!sub) return false;
+
+    const res = await fetch('/api/push/test-delayed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subscription: sub,
+        delaySeconds,
+      }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('Delayed test failed:', err);
+    return false;
+  }
+}

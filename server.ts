@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI, Type } from '@google/genai';
+import webpush from 'web-push';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -412,6 +413,201 @@ Rules:
     });
   }
 });
+
+// ==========================================
+// Web Push & Background Closed-App Reminders
+// ==========================================
+
+const VAPID_FILE = path.join(__dirname, '.vapid-keys.json');
+let vapidKeys: { publicKey: string; privateKey: string };
+
+try {
+  if (fs.existsSync(VAPID_FILE)) {
+    vapidKeys = JSON.parse(fs.readFileSync(VAPID_FILE, 'utf-8'));
+  } else {
+    vapidKeys = webpush.generateVAPIDKeys();
+    fs.writeFileSync(VAPID_FILE, JSON.stringify(vapidKeys, null, 2), 'utf-8');
+  }
+} catch {
+  vapidKeys = webpush.generateVAPIDKeys();
+}
+
+webpush.setVapidDetails(
+  'mailto:notifications@zenplan.app',
+  vapidKeys.publicKey,
+  vapidKeys.privateKey
+);
+
+interface PushSubRecord {
+  endpoint: string;
+  expirationTime?: number | null;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+}
+
+interface ClientScheduledReminder {
+  id: string;
+  taskId: string;
+  title: string;
+  description: string;
+  category: string;
+  timeLabel: string;
+  triggerTimeMs: number;
+  leadMinutes: number;
+  date: string;
+}
+
+interface StoredReminder extends ClientScheduledReminder {
+  subscriptionEndpoint: string;
+  fired: boolean;
+}
+
+const subscriptionsMap = new Map<string, PushSubRecord>();
+let scheduledRemindersList: StoredReminder[] = [];
+
+// GET /api/push/vapid-public-key
+app.get('/api/push/vapid-public-key', (_req: Request, res: Response) => {
+  res.json({ publicKey: vapidKeys.publicKey });
+});
+
+// POST /api/push/subscribe
+app.post('/api/push/subscribe', (req: Request, res: Response) => {
+  const { subscription } = req.body || {};
+  if (!subscription || !subscription.endpoint || !subscription.keys) {
+    res.status(400).json({ error: 'Invalid push subscription payload.' });
+    return;
+  }
+  subscriptionsMap.set(subscription.endpoint, subscription);
+  res.json({ success: true });
+});
+
+// POST /api/push/sync-reminders
+app.post('/api/push/sync-reminders', (req: Request, res: Response) => {
+  const { subscription, reminders } = req.body || {};
+  if (!subscription || !subscription.endpoint) {
+    res.status(400).json({ error: 'Missing push subscription' });
+    return;
+  }
+
+  subscriptionsMap.set(subscription.endpoint, subscription);
+
+  // Remove existing unfired reminders for this subscriber
+  scheduledRemindersList = scheduledRemindersList.filter(
+    (r) => r.subscriptionEndpoint !== subscription.endpoint || r.fired
+  );
+
+  if (Array.isArray(reminders)) {
+    const now = Date.now();
+    for (const item of reminders) {
+      if (!item.id || !item.triggerTimeMs || typeof item.triggerTimeMs !== 'number') continue;
+      // Skip reminders that are older than 5 minutes in the past
+      if (item.triggerTimeMs < now - 5 * 60 * 1000) continue;
+
+      scheduledRemindersList.push({
+        id: sanitizeString(item.id, 100),
+        taskId: sanitizeString(item.taskId, 60),
+        title: sanitizeString(item.title, 120),
+        description: sanitizeString(item.description, 300),
+        category: sanitizeString(item.category, 30),
+        timeLabel: sanitizeString(item.timeLabel, 20),
+        triggerTimeMs: item.triggerTimeMs,
+        leadMinutes: Number(item.leadMinutes) || 0,
+        date: sanitizeString(item.date, 20),
+        subscriptionEndpoint: subscription.endpoint,
+        fired: false,
+      });
+    }
+  }
+
+  res.json({
+    success: true,
+    activeRemindersCount: scheduledRemindersList.filter((r) => !r.fired).length,
+  });
+});
+
+// POST /api/push/test-delayed (Allows testing with closed app / locked phone!)
+app.post('/api/push/test-delayed', (req: Request, res: Response) => {
+  const { subscription, delaySeconds } = req.body || {};
+  if (!subscription || !subscription.endpoint) {
+    res.status(400).json({ error: 'Missing push subscription' });
+    return;
+  }
+
+  subscriptionsMap.set(subscription.endpoint, subscription);
+  const delay = Math.max(1, Math.min(60, Number(delaySeconds) || 5));
+
+  setTimeout(async () => {
+    try {
+      const payload = JSON.stringify({
+        title: '🔔 ZenPlan Reminder (App Was Closed)',
+        body: 'Success! Task reminders arrive on time even when the app is completely closed or screen is locked.',
+        tag: 'zenplan-test-closed',
+        data: { taskId: 'test_closed', date: new Date().toISOString().slice(0, 10) },
+        actions: [
+          { action: 'complete', title: '✓ Got It' },
+          { action: 'open', title: 'Open ZenPlan' },
+        ],
+      });
+      await webpush.sendNotification(subscription, payload);
+    } catch (err: any) {
+      console.warn('Delayed test notification failed:', err?.statusCode || err);
+    }
+  }, delay * 1000);
+
+  res.json({ success: true, message: `Notification will fire in ${delay} seconds.` });
+});
+
+// Background Reminder Loop: Runs every 10 seconds in Node to dispatch notifications to closed apps
+setInterval(async () => {
+  const now = Date.now();
+  const due = scheduledRemindersList.filter((r) => !r.fired && r.triggerTimeMs <= now);
+  if (due.length === 0) return;
+
+  for (const reminder of due) {
+    reminder.fired = true;
+    const sub = subscriptionsMap.get(reminder.subscriptionEndpoint);
+    if (!sub) continue;
+
+    const isExact = reminder.leadMinutes === 0;
+    const title = isExact
+      ? `Starting Now: ${reminder.title}`
+      : `Upcoming in ${reminder.leadMinutes}m: ${reminder.title}`;
+
+    const parts = [];
+    if (reminder.description) parts.push(reminder.description);
+    parts.push(isExact ? `Scheduled for now (${reminder.timeLabel})` : `Starts at ${reminder.timeLabel}`);
+    if (reminder.category) parts.push(reminder.category.toUpperCase());
+
+    const payload = JSON.stringify({
+      title,
+      body: parts.join(' • '),
+      tag: `zenplan-${reminder.taskId}-${isExact ? 'now' : 'lead'}`,
+      data: {
+        taskId: reminder.taskId,
+        date: reminder.date,
+      },
+      actions: [
+        { action: 'complete', title: '✓ Mark Complete' },
+        { action: 'open', title: 'Open App' },
+      ],
+    });
+
+    try {
+      await webpush.sendNotification(sub as any, payload);
+    } catch (err: any) {
+      if (err?.statusCode === 404 || err?.statusCode === 410) {
+        subscriptionsMap.delete(reminder.subscriptionEndpoint);
+      }
+    }
+  }
+
+  // Prune fired reminders older than 2 hours
+  scheduledRemindersList = scheduledRemindersList.filter(
+    (r) => !r.fired || now - r.triggerTimeMs < 2 * 60 * 60 * 1000
+  );
+}, 10_000);
 
 async function startServer() {
   const port = Number(process.env.PORT) || 3000;

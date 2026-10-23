@@ -20,6 +20,7 @@ interface UpcomingTimelineProps {
   onMoveToNextDay: (id: string) => void;
   onAddTaskAtTime: (date: string, startTime: string) => void;
   onRebalanceDay: (date: string) => void;
+  onViewTaskDetails?: (task: Task) => void;
 }
 
 export const UpcomingTimeline: React.FC<UpcomingTimelineProps> = ({
@@ -32,6 +33,7 @@ export const UpcomingTimeline: React.FC<UpcomingTimelineProps> = ({
   onMoveToNextDay,
   onAddTaskAtTime,
   onRebalanceDay,
+  onViewTaskDetails,
 }) => {
   const todayStr = getTodayDateString();
   const [weekOffset, setWeekOffset] = useState(0);
@@ -407,14 +409,23 @@ export const UpcomingTimeline: React.FC<UpcomingTimelineProps> = ({
                     </div>
                   </button>
 
-                  {/* Content (Title & Meta) */}
+                  {/* Content (Title, Description & Meta - Clicking opens task details pop-up) */}
                   <div
-                    className="flex-1 min-w-0 pr-1 cursor-pointer"
-                    onClick={() => onEditTask(t)}
+                    className="flex-1 min-w-0 pr-1 cursor-pointer group"
+                    onClick={() => (onViewTaskDetails ? onViewTaskDetails(t) : onEditTask(t))}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        (onViewTaskDetails ? onViewTaskDetails(t) : onEditTask(t));
+                      }
+                    }}
+                    aria-label={`View details for ${t.title}`}
                   >
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <h3
-                        className={`font-body font-semibold text-[14px] sm:text-[15px] leading-snug break-words ${
+                        className={`font-body font-semibold text-[14px] sm:text-[15px] leading-snug break-words group-hover:underline ${
                           t.completed
                             ? 'line-through text-[#55636F]'
                             : isTargetNext
@@ -431,6 +442,17 @@ export const UpcomingTimeline: React.FC<UpcomingTimelineProps> = ({
                         </span>
                       )}
                     </div>
+
+                    {/* Task description preview */}
+                    {t.description && (
+                      <p
+                        className={`text-[12.5px] mt-1 line-clamp-2 leading-relaxed ${
+                          isTargetNext ? 'text-[#D5DFE6]' : 'text-[#55636F]'
+                        }`}
+                      >
+                        {t.description}
+                      </p>
+                    )}
 
                     <div className="mt-1.5 flex items-center gap-2 flex-wrap text-xs">
                       <span

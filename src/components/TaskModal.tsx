@@ -268,11 +268,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </label>
             <textarea
               id="task-desc-input"
-              rows={2}
+              rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add key context, deliverables, or agenda..."
-              className="w-full px-3.5 py-2.5 rounded-xl border border-[#DDE5EA] bg-white text-[#17212B] font-body text-sm focus:border-[#F2A33A] focus:outline-none resize-none"
+              placeholder="Add key context, deliverables, agenda, or checklist details..."
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#DDE5EA] bg-white text-[#17212B] font-body text-sm focus:border-[#F2A33A] focus:outline-none resize-y min-h-[76px]"
             />
           </div>
 
